@@ -12,8 +12,8 @@ export class UserController {
   }
 
   getAllUsers = asyncHandler(async (req: Request, res: Response) => {
-    const users = await this.userService.findAll(req.query);
-    sendSuccess(res, users, 200);
+    const result = await this.userService.findAll(req.query);
+    sendSuccess(res, result.data, 200, { total: result.total });
   });
 
   getUser = asyncHandler(async (req: Request, res: Response) => {
@@ -27,7 +27,9 @@ export class UserController {
 
   createUser = asyncHandler(async (req: Request, res: Response) => {
     const user = await this.userService.create(req.body);
-    sendSuccess(res, user, 201);
+    // Don't return the password in the response
+    const { password, ...userWithoutPassword } = user as any;
+    sendSuccess(res, userWithoutPassword, 201);
   });
 
   updateUser = asyncHandler(async (req: Request, res: Response) => {

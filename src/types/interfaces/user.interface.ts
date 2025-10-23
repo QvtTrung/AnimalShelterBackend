@@ -37,3 +37,13 @@ export interface UsersQuery {
   limit?: number;
   fields?: string[];
 }
+
+export interface CreateUserPayload {
+  email: string;
+  password: string;
+  first_name: string;
+  last_name: string;
+  phone_number?: string;
+  address?: string;
+  avatar?: string;
+}

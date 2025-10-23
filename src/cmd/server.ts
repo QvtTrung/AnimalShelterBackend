@@ -4,11 +4,7 @@ import helmet from 'helmet';
 import cors from 'cors';
 import config from '../config';
 import authRoutes from '../routes/auth.routes';
-import petRoutes from '../routes/pet.routes';
-import adoptionRoutes from '../routes/adoption.routes';
-import reportRoutes from '../routes/report.routes';
-import rescueRoutes from '../routes/rescue.routes';
-import userRoutes from '../routes/user.routes';
+import routes from '../routes/index';
 import { errorHandler } from '../middleware/error.middleware';
 import { corsMiddleware } from '../middleware/cors.middleware';
 
@@ -26,11 +22,7 @@ app.use(corsMiddleware);
 
 // Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/pets', petRoutes);
-app.use('/api/adoptions', adoptionRoutes);
-app.use('/api/reports', reportRoutes);
-app.use('/api/rescues', rescueRoutes);
-app.use('/api/users', userRoutes);
+app.use('/api', routes);
 
 // Error handling middleware
 app.use(errorHandler);

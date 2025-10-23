@@ -2,12 +2,12 @@ import { Router } from 'express';
 import { PetController } from '../controllers/pet.controller';
 import { upload } from '../middleware/upload.middleware';
 import { validateSchema, validateFileUpload } from '../middleware/validate.middleware';
+import { validateFormData } from '../middleware/form-data.middleware';
 import {
   createPetSchema,
   updatePetSchema,
   petIdSchema,
   // petImageSchema,
-  petMultipleImagesSchema,
   deletePetImageSchema
 } from '../types/validation/pet.schema';
 
@@ -17,7 +17,7 @@ const petController = new PetController();
 // Pet routes
 router.get('/', petController.getAllPets);
 router.get('/:id', validateSchema(petIdSchema), petController.getPet);
-router.post('/', validateSchema(createPetSchema), petController.createPet);
+router.post('/', upload.array('images', 5), validateFormData(createPetSchema), petController.createPet);
 router.patch('/:id', validateSchema(updatePetSchema), petController.updatePet);
 router.delete('/:id', validateSchema(petIdSchema), petController.deletePet);
 

@@ -35,20 +35,20 @@ export const petIdSchema = z.object({
   })
 });
 
-export const petImageSchema = z.object({
-  params: z.object({
-    id: z.string().uuid('Invalid pet ID')
-  })
-});
+// export const petImageSchema = z.object({
+//   params: z.object({
+//     id: z.string().uuid('Invalid pet ID')
+//   })
+// });
 
-export const petMultipleImagesSchema = z.object({
-  params: z.object({
-    id: z.string().uuid('Invalid pet ID')
-  }),
-  body: z.object({
-    imageCount: z.number().int().min(1).max(5).default(1)
-  })
-});
+// export const petMultipleImagesSchema = z.object({
+//   params: z.object({
+//     id: z.string().uuid('Invalid pet ID')
+//   }),
+//   body: z.object({
+//     imageCount: z.number().int().min(1).max(5).default(1)
+//   })
+// });
 
 export const deletePetImageSchema = z.object({
   params: z.object({

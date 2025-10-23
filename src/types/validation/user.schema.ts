@@ -3,11 +3,12 @@ import { z } from 'zod';
 export const createUserSchema = z.object({
   body: z.object({
     email: z.string().email('Invalid email address'),
+    password: z.string().min(6, 'Password must be at least 6 characters'),
     first_name: z.string().min(1, 'First name is required'),
     last_name: z.string().min(1, 'Last name is required'),
-    directus_user_id: z.string({
-      required_error: 'Directus user ID is required'
-    })
+    phone_number: z.string().optional(),
+    address: z.string().optional(),
+    avatar: z.string().optional()
   })
 });
 

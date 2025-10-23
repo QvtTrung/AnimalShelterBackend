@@ -15,8 +15,8 @@ export class PetController {
   }
 
   getAllPets = asyncHandler(async (req: Request, res: Response) => {
-    const pets = await this.petService.findAll(req.query);
-    sendSuccess(res, pets, 200);
+    const result = await this.petService.findAll(req.query);
+    sendSuccess(res, result.data, 200, { total: result.total });
   });
 
   getPet = asyncHandler(async (req: Request, res: Response) => {
@@ -30,10 +30,21 @@ export class PetController {
 
   createPet = asyncHandler(async (req: Request, res: Response) => {
     const files = req.files as Express.Multer.File[];
-    const petData = {
-      ...req.body,
-      images: files?.map(file => file.path) || []
-    };
+
+    // If the request is form-data, the body might be flattened
+    // So we need to handle both cases
+    let petData = req.body;
+
+    // If req.body is already flattened (from form-data), use it as is
+    // If it's nested under 'body', extract it
+    if (req.body && req.body.body && typeof req.body.body === 'object') {
+      petData = req.body.body;
+    }
+
+    // Add images to pet data if files were uploaded
+    if (files?.length) {
+      petData.images = files.map(file => file.path);
+    }
     
     const pet = await this.petService.create(petData);
     

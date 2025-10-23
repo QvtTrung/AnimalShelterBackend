@@ -13,9 +13,22 @@ export class BaseService<T> {
     throw new Error('An unexpected error occurred');
   }
 
-  async findAll(query?: any) {
+  async findAll(query?: any): Promise<{ data: any[]; total: number }> {
     try {
-      return await directus.request(readItems(this.collection, query));
+      // Ensure we get total count for pagination
+      const queryWithMeta = {
+        ...query,
+        meta: '*',
+      };
+      
+      const result = await directus.request(readItems(this.collection, queryWithMeta));
+      
+      // Return both data and pagination metadata
+      const items = Array.isArray(result) ? result : [];
+      return {
+        data: items,
+        total: items.length && items[0]?.__v?.total_count ? items[0].__v.total_count : items.length,
+      };
     } catch (error) {
       throw error;
     }

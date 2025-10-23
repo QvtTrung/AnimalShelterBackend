@@ -71,9 +71,16 @@ export function sendResponse<T>(
 export function sendSuccess<T>(
   res: Response,
   data: T,
-  statusCode: number = 200
+  statusCode: number = 200,
+  meta?: { total?: number }
 ): void {
   const response = createSuccessResponse(data, undefined, statusCode);
+  
+  // Include pagination metadata if provided
+  if (meta) {
+    (response as any).meta = meta;
+  }
+  
   sendResponse(res, response, statusCode);
 }
 
