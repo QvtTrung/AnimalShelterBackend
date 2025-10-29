@@ -3,6 +3,8 @@ export interface DirectusUser {
   email: string;
   first_name?: string;
   last_name?: string;
+  role?: string;
+  role_name?: string;
 }
 
 export interface AppUser {
@@ -18,6 +20,7 @@ export interface AppUser {
   phone_number?: string;
   avatar?: string;
   address?: string;
+  role?: 'Administrator' | 'Staff' | 'User';
 }
 
 export type AppUserOrNull = AppUser | null;
@@ -46,4 +49,5 @@ export interface CreateUserPayload {
   phone_number?: string;
   address?: string;
   avatar?: string;
+  role?: string;
 }

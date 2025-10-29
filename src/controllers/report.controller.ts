@@ -1,10 +1,9 @@
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response } from 'express';
 import { ReportService } from '../services/report.service';
 import { ReportImageService } from '../services/report-image.service';
 import { asyncHandler } from '../middleware/error.middleware';
 import { sendSuccess, sendError } from '../utils/response';
 import { AppError } from '../utils/errors';
-import { deleteImage } from '../middleware/upload.middleware';
 
 export class ReportController {
   private reportService: ReportService;
@@ -15,98 +14,112 @@ export class ReportController {
     this.reportImageService = new ReportImageService();
   }
 
-  getAllReports = async (_req: Request, res: Response, next: NextFunction) => {
-    try {
-      const reports = await this.reportService.findAll();
-      res.json(reports);
-    } catch (error) {
-      next(error);
-    }
-  };
+  getAllReports = asyncHandler(async (req: Request, res: Response) => {
+    const result = await this.reportService.findAll(req.query);
+    sendSuccess(res, result.data, 200, { total: result.total });
+  });
 
-  getReport = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const report = await this.reportService.findOne(req.params.id);
-      if (!report) {
-        throw new AppError(404, 'fail', 'Report not found');
+  getReport = asyncHandler(async (req: Request, res: Response) => {
+    const report = await this.reportService.findOne(req.params.id);
+    if (!report) {
+      sendError(res, new AppError(404, 'fail', 'Report not found'));
+      return;
+    }
+    sendSuccess(res, report, 200);
+  });
+
+  createReport = asyncHandler(async (req: Request, res: Response) => {
+    const files = req.files as Express.Multer.File[];
+
+    // If the request is form-data, the body might be flattened
+    // So we need to handle both cases
+    let reportData = req.body || {};
+
+    // If req.body is a string (JSON string), parse it
+    if (typeof req.body === 'string') {
+      try {
+        reportData = JSON.parse(req.body);
+      } catch (e) {
+        reportData = {};
       }
-      res.json(report);
-    } catch (error) {
-      next(error);
     }
-  };
 
-  createReport = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const files = req.files as Express.Multer.File[];
-      const imageUrls = files ? files.map(file => file.path) : [];
-
-      const reportData = {
-        ...req.body,
-        images: imageUrls
-      };
-
-      const report = await this.reportService.create(reportData);
-      res.status(201).json(report);
-    } catch (error) {
-      next(error);
+    // If req.body is already flattened (from form-data), use it as is
+    // If it's nested under 'body', extract it
+    if (req.body && req.body.body && typeof req.body.body === 'object') {
+      reportData = req.body.body;
+    } else if (req.body && !req.body.body) {
+      // If the body is flattened but doesn't have a nested body property
+      // it might be from form-data middleware
+      reportData = req.body;
     }
-  };
 
-  updateReport = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const report = await this.reportService.update(req.params.id, req.body);
-      if (!report) {
-        throw new AppError(404, 'fail', 'Report not found');
+    // Remove images from reportData if they exist
+    if (reportData && reportData.images) {
+      delete reportData.images;
+    }
+
+    // Ensure reportData is a proper object
+    if (typeof reportData !== 'object' || reportData === null) {
+      reportData = {};
+    }
+
+    const report = await this.reportService.create(reportData);
+
+    // Create image records if files were uploaded
+    if (files && files.length > 0) {
+      for (const file of files) {
+        await this.reportImageService.create({
+          report_id: report.id,
+          image_url: file.path
+        });
       }
-      res.json(report);
-    } catch (error) {
-      next(error);
     }
-  };
 
-  deleteReport = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const report = await this.reportService.findOne(req.params.id);
-      if (!report) {
-        throw new AppError(404, 'fail', 'Report not found');
+    // Fetch the report with its images
+    const reportWithImages = await this.reportService.findOne(report.id);
+    sendSuccess(res, reportWithImages, 201);
+  });
+
+  updateReport = asyncHandler(async (req: Request, res: Response) => {
+    const report = await this.reportService.update(req.params.id, req.body);
+    sendSuccess(res, report, 200);
+  });
+
+  deleteReport = asyncHandler(async (req: Request, res: Response) => {
+    // First delete all report images
+    const images = await this.reportImageService.findByReportId(req.params.id);
+    if (images && Array.isArray(images)) {
+      for (const image of images) {
+        await this.reportImageService.delete(image.id);
       }
-
-      // Delete associated images
-      if (report.images) {
-        await Promise.all((report.images as string[]).map((imageUrl: string) => deleteImage(imageUrl)));
-      }
-
-      await this.reportService.delete(req.params.id);
-      res.status(204).send();
-    } catch (error) {
-      next(error);
     }
-  };
 
-  getUserReports = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const reports = await this.reportService.getUserReports(req.params.userId);
-      res.json(reports);
-    } catch (error) {
-      next(error);
+    await this.reportService.delete(req.params.id);
+    sendSuccess(res, { message: 'Report deleted successfully' }, 200);
+  });
+
+  getUserReports = asyncHandler(async (req: Request, res: Response) => {
+    const reports = await this.reportService.getUserReports(req.params.userId);
+    sendSuccess(res, reports.data, 200, { total: reports.total });
+  });
+
+  getPendingReports = asyncHandler(async (req: Request, res: Response) => {
+    const result = await this.reportService.findPending(req.query);
+    sendSuccess(res, result.data, 200, { total: result.total });
+  });
+
+  updateReportStatus = asyncHandler(async (req: Request, res: Response) => {
+    const { status } = req.body;
+    if (!status) {
+      sendError(res, new AppError(400, 'fail', 'Status is required'));
+      return;
     }
-  };
+    const report = await this.reportService.updateReportStatus(req.params.id, status);
+    sendSuccess(res, report, 200);
+  });
 
-  updateReportStatus = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const { status } = req.body;
-      if (!status) {
-        throw new AppError(400, 'fail', 'Status is required');
-      }
-      const report = await this.reportService.updateReportStatus(req.params.id, status);
-      res.json(report);
-    } catch (error) {
-      next(error);
-    }
-  };
-
-  addReportImages = asyncHandler(async (req: Request, res: Response) => {
+  uploadReportImages = asyncHandler(async (req: Request, res: Response) => {
     if (!req.files || (req.files as Express.Multer.File[]).length === 0) {
       sendError(res, new AppError(404, 'error', 'No files uploaded'));
       return;
@@ -127,10 +140,7 @@ export class ReportController {
   });
 
   deleteReportImage = asyncHandler(async (req: Request, res: Response) => {
-    const { imageId } = req.params;
-
-    await this.reportImageService.delete(imageId);
-
+    await this.reportImageService.delete(req.params.imageId);
     sendSuccess(res, { message: 'Image deleted successfully' }, 200);
   });
 

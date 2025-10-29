@@ -1,7 +1,19 @@
 import { BaseService } from './base.service';
-import { DirectusReport } from '../types/directus';
 
-export class ReportService extends BaseService<DirectusReport> {
+interface Report {
+  id: string;
+  title: string;
+  description: string;
+  species: string;
+  type: 'abuse' | 'abandonment' | 'injured_animal' | 'other';
+  urgency_level: 'low' | 'medium' | 'high' | 'critical';
+  location: string;
+  status: 'pending' | 'assigned' | 'resolved';
+  created_at?: Date;
+  updated_at?: Date;
+}
+
+export class ReportService extends BaseService<Report> {
   constructor() {
     super('reports');
   }
@@ -10,11 +22,11 @@ export class ReportService extends BaseService<DirectusReport> {
     try {
       return await this.findAll({
         filter: {
-          reporter: { _eq: userId }
+          user_created: { _eq: userId }
         }
       });
     } catch (error) {
-      throw this.handleError(error);
+      throw error;
     }
   }
 
@@ -22,8 +34,18 @@ export class ReportService extends BaseService<DirectusReport> {
     try {
       return await this.update(id, { status });
     } catch (error) {
-      throw this.handleError(error);
+      throw error;
     }
   }
 
+  async findPending(query?: any) {
+    try {
+      return await this.findAll({
+        ...query,
+        filter: { status: { _eq: 'pending' } },
+      });
+    } catch (error) {
+      throw error;
+    }
+  }
 }

@@ -14,5 +14,5 @@ export interface DirectusPet {
   size?: 'small' | 'medium' | 'large';
   health_status?: 'healthy' | 'needs_attention' | 'critical' | 'deceased';
   linked_report?: string; // reference to reports collection
-  gender?: string;
+  gender?: 'male' | 'female' | 'unknown';
 }

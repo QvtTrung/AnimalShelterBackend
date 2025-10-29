@@ -12,12 +12,12 @@ export class UserController {
   }
 
   getAllUsers = asyncHandler(async (req: Request, res: Response) => {
-    const result = await this.userService.findAll(req.query);
+    const result = await this.userService.findAllWithRoles(req.query);
     sendSuccess(res, result.data, 200, { total: result.total });
   });
 
   getUser = asyncHandler(async (req: Request, res: Response) => {
-    const user = await this.userService.findOne(req.params.id);
+    const user = await this.userService.findOneWithRole(req.params.id);
     if (!user) {
       sendError(res, new AppError(404, 'fail', 'User not found'));
       return;
@@ -26,15 +26,19 @@ export class UserController {
   });
 
   createUser = asyncHandler(async (req: Request, res: Response) => {
-    const user = await this.userService.create(req.body);
+    const user = await this.userService.createUserWithPassword(req.body);
     // Don't return the password in the response
     const { password, ...userWithoutPassword } = user as any;
-    sendSuccess(res, userWithoutPassword, 201);
+    // Fetch the user with role information
+    const userWithRole = await this.userService.findOneWithRole(user.id);
+    sendSuccess(res, userWithRole, 201);
   });
 
   updateUser = asyncHandler(async (req: Request, res: Response) => {
     const user = await this.userService.updateUserProfile(req.params.id, req.body);
-    sendSuccess(res, user, 200);
+    // Fetch the user with role information
+    const userWithRole = await this.userService.findOneWithRole(req.params.id);
+    sendSuccess(res, userWithRole, 200);
   });
 
   deleteUser = asyncHandler(async (req: Request, res: Response) => {
