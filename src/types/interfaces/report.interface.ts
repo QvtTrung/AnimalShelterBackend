@@ -12,5 +12,9 @@ export interface DirectusReport {
   title: string;
   type: 'abuse' | 'abandonment' | 'injured_animal' | 'other';
   urgency_level: 'low' | 'medium' | 'high' | 'critical';
-  linked_pet?: string; // reference to pets collection
+  // linked_pet?: string; // reference to pets collection
+  coordinates?: {
+    type: "Point";
+    coordinates: [number, number]; // [longitude, latitude]
+  };
 }

@@ -14,7 +14,14 @@ export const createReportSchema = z.object({
     }),
     location: z.string().min(1, 'Location is required'),
     status: z.enum(['pending', 'assigned', 'resolved']).default('pending'),
-    linked_pet: z.string().uuid('Invalid pet ID').optional()
+    linked_pet: z.string().uuid('Invalid pet ID').optional(),
+    coordinates: z.object({
+      type: z.literal("Point"),
+      coordinates: z.tuple([
+        z.number(), // longitude
+        z.number(), // latitude
+      ])
+    }).optional()
   })
 });
 

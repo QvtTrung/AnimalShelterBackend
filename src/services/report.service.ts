@@ -11,6 +11,10 @@ interface Report {
   status: 'pending' | 'assigned' | 'resolved';
   created_at?: Date;
   updated_at?: Date;
+  coordinates?: {
+    type: "Point";
+    coordinates: [number, number]; // [longitude, latitude]
+  };
 }
 
 export class ReportService extends BaseService<Report> {
