@@ -1,7 +1,7 @@
 import { BaseService } from './base.service';
 import { AppUser, CreateUserPayload, DirectusUser } from '../types/directus';
 import { directus } from '../config/directus';
-import { createUser, readUsers, createItem, deleteItem, updateItem, updateUser, readRoles } from '@directus/sdk';
+import { createUser, readUsers, createItem, deleteItem, updateItem, updateUser, readRoles, readItems } from '@directus/sdk';
 import { extractDirectusData } from '../utils/validation';
 import { DuplicateEmailError } from '../utils/errors';
 
@@ -173,8 +173,33 @@ export class UserService extends BaseService<AppUser> {
 
   async findAllWithRoles(query?: any) {
     try {
-      // Get all users
-      const result = await this.findAll(query);
+      // Handle pagination parameters
+      const page = Number(query?.page) || 1;
+      const limit = Number(query?.limit) || Number(query?.pageSize) || 10;
+      const offset = (page - 1) * limit;
+
+      // Remove refine-specific pagination params to avoid conflicts
+      const { page: _, limit: __, pageSize: ___, ...restQuery } = query || {};
+
+      // First get total count
+      const countResponse = await directus.request(readItems(this.collection, {
+        aggregate: { count: '*' },
+        ...restQuery?.filter ? { filter: restQuery.filter } : {},
+      }));
+
+      const total = countResponse?.[0]?.count ?? 0;
+
+      // Then get paginated data
+      const items = await directus.request(readItems(this.collection, {
+        ...restQuery,
+        limit,
+        offset,
+      }));
+
+      const result = {
+        data: Array.isArray(items) ? items : [],
+        total,
+      };
 
       // For each user, get their role
       for (const user of result.data) {

@@ -12,7 +12,19 @@ export class UserController {
   }
 
   getAllUsers = asyncHandler(async (req: Request, res: Response) => {
-    const result = await this.userService.findAllWithRoles(req.query);
+    // Handle pagination parameters
+    const { page = 1, limit = 10, offset = 0, ...otherQuery } = req.query;
+
+    console.log("Request query:", req.query);
+
+    const result = await this.userService.findAllWithRoles({
+      ...otherQuery,
+      page: parseInt(page as string),
+      limit: parseInt(limit as string),
+      offset: parseInt(offset as string),
+    });
+
+    console.log("Retrieved users:", result);
     sendSuccess(res, result.data, 200, { total: result.total });
   });
 

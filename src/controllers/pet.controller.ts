@@ -15,7 +15,19 @@ export class PetController {
   }
 
   getAllPets = asyncHandler(async (req: Request, res: Response) => {
-    const result = await this.petService.findAll(req.query);
+    // Handle pagination parameters
+    const { page = 1, limit = 10, offset = 0, ...otherQuery } = req.query;
+
+    console.log("Request query:", req.query);
+
+    const result = await this.petService.findAll({
+      ...otherQuery,
+      page: parseInt(page as string),
+      limit: parseInt(limit as string),
+      offset: parseInt(offset as string),
+    });
+
+    console.log("Retrieved pets:", result);
     sendSuccess(res, result.data, 200, { total: result.total });
   });
 

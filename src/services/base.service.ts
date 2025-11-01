@@ -15,19 +15,32 @@ export class BaseService<T> {
 
   async findAll(query?: any): Promise<{ data: any[]; total: number }> {
     try {
-      // Ensure we get total count for pagination
-      const queryWithMeta = {
-        ...query,
-        meta: '*',
-      };
+      // Extract pagination parameters - handle both refine and directus formats
+      const page = Number(query?.page) || 1;
+      const limit = Number(query?.limit) || Number(query?.pageSize) || 10;
+      const offset = (page - 1) * limit;
+
+      // Remove refine-specific pagination params to avoid conflicts
+      const { page: _, limit: __, pageSize: ___, ...restQuery } = query || {};
+
+      // First get total count
+      const countResponse = await directus.request(readItems(this.collection, {
+        aggregate: { count: '*' },
+        ...restQuery?.filter ? { filter: restQuery.filter } : {},
+      }));
       
-      const result = await directus.request(readItems(this.collection, queryWithMeta));
-      
-      // Return both data and pagination metadata
-      const items = Array.isArray(result) ? result : [];
+      const total = countResponse?.[0]?.count ?? 0;
+
+      // Then get paginated data
+      const items = await directus.request(readItems(this.collection, {
+        ...restQuery,
+        limit,
+        offset,
+      }));
+
       return {
-        data: items,
-        total: items.length && items[0]?.__v?.total_count ? items[0].__v.total_count : items.length,
+        data: Array.isArray(items) ? items : [],
+        total,
       };
     } catch (error) {
       throw error;
