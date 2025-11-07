@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import { RescueController } from '../controllers/rescue.controller';
+import { validateSchema } from '../middleware/validate.middleware';
+import { rescueSchema, rescueParticipantSchema, rescueReportSchema } from '../types/validation/rescue.schema';
 
 const router = Router();
 const rescueController = new RescueController();
@@ -7,13 +9,20 @@ const rescueController = new RescueController();
 // Rescue CRUD routes
 router.get('/', rescueController.getAllRescues);
 router.get('/:id', rescueController.getRescue);
-router.post('/', rescueController.createRescue);
-router.patch('/:id', rescueController.updateRescue);
+router.post('/', validateSchema(rescueSchema), rescueController.createRescue);
+router.patch('/:id', validateSchema(rescueSchema.partial()), rescueController.updateRescue);
 router.delete('/:id', rescueController.deleteRescue);
 
-// Additional rescue routes
-// router.get('/user/:userId', rescueController.getUserRescues);
-// router.get('/pet/:petId', rescueController.getPetRescues);
-// router.patch('/:id/veterinary-status', rescueController.updateVeterinaryStatus);
+// Participant management routes
+router.post('/:id/participants', validateSchema(rescueParticipantSchema), rescueController.addParticipant);
+router.delete('/participants/:participantId', rescueController.removeParticipant);
+
+// Report management routes
+router.post('/:id/reports', validateSchema(rescueReportSchema), rescueController.addReport);
+router.patch('/reports/:rescueReportId', validateSchema(rescueReportSchema), rescueController.updateReportStatus);
+router.delete('/reports/:rescueReportId', rescueController.removeReport);
+
+// User's rescues
+router.get('/user/:userId', rescueController.getUserRescues);
 
 export default router;

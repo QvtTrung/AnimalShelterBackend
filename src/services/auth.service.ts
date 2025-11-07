@@ -5,6 +5,7 @@ import { UnauthorizedError, DuplicateEmailError } from '../utils/errors';
 import { readMe, registerUser, readUsers, readItems, createItem, deleteItem } from '@directus/sdk';
 import { DirectusUser, AppUser, AppUserOrNull, RegisterPayload, UsersQuery } from '../types/directus';
 import { extractDirectusData } from '../utils/validation';
+import config from '../config/index';
 
 export class AuthService {
   async login(email: string, password: string) {
@@ -41,7 +42,7 @@ export class AuthService {
         token: result.access_token
       };
     } catch (error) {
-      throw new UnauthorizedError('Invalid credentials');
+      throw new UnauthorizedError(error?.message || 'Invalid email or password');
     }
   }
 
@@ -83,6 +84,9 @@ export class AuthService {
   }
 
   async register(payload: RegisterPayload) {
+    if (config.directus.token) {   
+      directus.setToken(config.directus.token);
+    }
     // Extract the payload data (validation is already done in the route middleware)
     const { email, password, first_name, last_name } = payload;
 
@@ -176,6 +180,7 @@ export class AuthService {
 
     // Login after successful registration to get the token
     const loginResult = await directus.login({ email, password });
+    directus.setToken('');
     
     return { 
       directusUser, 
@@ -190,6 +195,45 @@ export class AuthService {
       return true;
     } catch (error) {
       throw new UnauthorizedError('Error during logout');
+    }
+  }
+
+  async refreshToken() {
+    try {
+      // Get the current user to verify they are still authenticated
+      const directusUser = await directus.request(readMe({
+        fields: ['id', 'email', 'first_name', 'last_name']
+      }));
+
+      // Get the application user data using the Directus user ID
+      let appUser: AppUserOrNull = null;
+      try {
+        const query = {
+          filter: { directus_user_id: { _eq: directusUser.id } },
+          limit: 1,
+          fields: ['*'],
+        };
+        const res = await directus.request(readItems('users', query));
+        appUser = extractDirectusData<AppUser>(res);
+      } catch (err: any) {
+        console.error('Error fetching application user:', err);
+      }
+
+      // Get a new token using the existing refresh mechanism
+      const tokens = await directus.refresh();
+      
+      return {
+        directusUser: {
+          id: directusUser.id,
+          email: directusUser.email,
+          first_name: directusUser.first_name,
+          last_name: directusUser.last_name
+        },
+        user: appUser,
+        token: tokens.access_token
+      };
+    } catch (error) {
+      throw new UnauthorizedError('Failed to refresh token');
     }
   }
 }

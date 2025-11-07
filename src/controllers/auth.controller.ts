@@ -51,4 +51,13 @@ export class AuthController {
       return sendError(res, error);
     }
   });
+
+  refreshToken = asyncHandler(async (_req: Request, res: Response) => {
+    try {
+      const result = await this.authService.refreshToken();
+      sendSuccess(res, result, 200);
+    } catch (error) {
+      return sendError(res, error);
+    }
+  });
 }

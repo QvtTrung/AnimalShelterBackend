@@ -15,7 +15,7 @@ export class UserController {
     // Handle pagination parameters
     const { page = 1, limit = 10, offset = 0, ...otherQuery } = req.query;
 
-    console.log("Request query:", req.query);
+    // console.log("Request query:", req.query);
 
     const result = await this.userService.findAllWithRoles({
       ...otherQuery,
@@ -24,7 +24,7 @@ export class UserController {
       offset: parseInt(offset as string),
     });
 
-    console.log("Retrieved users:", result);
+    // console.log("Retrieved users:", result);
     sendSuccess(res, result.data, 200, { total: result.total });
   });
 

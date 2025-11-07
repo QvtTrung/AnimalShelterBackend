@@ -1,6 +1,6 @@
 export interface DirectusAdoption {
   id: string;
-  status: 'planned' | 'in_progress' | 'completed' | 'cancelled';
+  status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
   sort?: number;
   user_created?: string;  // reference to directus_users collection
   date_created?: string;

@@ -11,9 +11,9 @@ const directus = createDirectus(config.directus.url)
   .with(authentication('json'));
 
 // Set the token globally if it exists in the configuration
-if (config.directus.token) {
-  directus.setToken(config.directus.token);
-}
+// if (config.directus.token) {
+//   directus.setToken(config.directus.token);
+// }
 
   export { directus };
 

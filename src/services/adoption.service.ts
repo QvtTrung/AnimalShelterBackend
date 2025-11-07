@@ -30,7 +30,7 @@ export class AdoptionService extends BaseService<DirectusAdoption> {
     }
   }
 
-  async updateAdoptionStatus(id: string, status: 'planned' | 'in_progress' | 'completed' | 'cancelled') {
+  async updateAdoptionStatus(id: string, status: | 'pending' | 'in_progress' | 'completed' | 'cancelled') {
     try {
       return await this.update(id, { status });
     } catch (error) {
