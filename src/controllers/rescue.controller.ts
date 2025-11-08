@@ -48,6 +48,22 @@ export class RescueController {
   addParticipant = asyncHandler(async (req: Request, res: Response) => {
     const { users_id, role } = req.body;
     console.log ('Adding participant with users_id:', users_id, 'and role:', role);
+
+    // Check if there are already enough participants
+    const rescue = await this.rescueService.findOne(req.params.id);
+    if (!rescue) {
+      sendError(res, new AppError(404, 'fail', 'Rescue not found'));
+      return;
+    }
+
+    const currentParticipants = rescue.participants?.length || 0;
+    const requiredParticipants = rescue.required_participants || 0;
+
+    if (currentParticipants >= requiredParticipants) {
+      sendError(res, new AppError(400, 'fail', `Cannot add more participants. Maximum required participants (${requiredParticipants}) already reached.`));
+      return;
+    }
+
     const participant = await this.rescueService.addParticipant(req.params.id, users_id, role);
     sendSuccess(res, participant, 201);
   });

@@ -39,7 +39,8 @@ export class AuthService {
           last_name: directusUser.last_name
         },
         user: appUser,
-        token: result.access_token
+        token: result.access_token,
+        refresh_token: result.refresh_token // Include refresh token for flexibility
       };
     } catch (error) {
       throw new UnauthorizedError(error?.message || 'Invalid email or password');
@@ -185,7 +186,8 @@ export class AuthService {
     return { 
       directusUser, 
       user: createdAppUser,
-      token: loginResult.access_token
+      token: loginResult.access_token,
+      refresh_token: loginResult.refresh_token // Include refresh token for flexibility
     };
   }
 
@@ -200,6 +202,14 @@ export class AuthService {
 
   async refreshToken() {
     try {
+      // Refresh the access token using Directus SDK
+      // This will use the refresh token cookie automatically
+      const tokens = await directus.refresh();
+      
+      if (!tokens || !tokens.access_token) {
+        throw new UnauthorizedError('Failed to obtain new access token');
+      }
+
       // Get the current user to verify they are still authenticated
       const directusUser = await directus.request(readMe({
         fields: ['id', 'email', 'first_name', 'last_name']
@@ -218,9 +228,6 @@ export class AuthService {
       } catch (err: any) {
         console.error('Error fetching application user:', err);
       }
-
-      // Get a new token using the existing refresh mechanism
-      const tokens = await directus.refresh();
       
       return {
         directusUser: {
@@ -230,10 +237,12 @@ export class AuthService {
           last_name: directusUser.last_name
         },
         user: appUser,
-        token: tokens.access_token
+        token: tokens.access_token,
+        refresh_token: tokens.refresh_token // Include refresh token if needed
       };
-    } catch (error) {
-      throw new UnauthorizedError('Failed to refresh token');
+    } catch (error: any) {
+      console.error('Refresh token error:', error);
+      throw new UnauthorizedError('Failed to refresh token. Please login again.');
     }
   }
 }

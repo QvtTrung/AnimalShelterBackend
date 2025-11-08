@@ -31,6 +31,10 @@ const config = {
   redis: {
     url: process.env.REDIS_URL || 'redis://localhost:6379',
   },
+  novu: {
+    apiKey: process.env.NOVU_API_KEY,
+    appId: process.env.NOVU_APP_ID,
+  },
 };
 
 export default config;

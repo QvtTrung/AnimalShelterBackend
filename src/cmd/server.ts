@@ -1,12 +1,12 @@
 import express, { Application } from 'express';
 import morgan from 'morgan';
 import helmet from 'helmet';
-import cors from 'cors';
 import config from '../config';
 import authRoutes from '../routes/auth.routes';
 import routes from '../routes/index';
 import { errorHandler } from '../middleware/error.middleware';
 import { corsMiddleware } from '../middleware/cors.middleware';
+import { authMiddleware } from '../middleware/auth.middleware';
 
 // Create Express application
 const app: Application = express();
@@ -19,6 +19,9 @@ app.use(helmet());
 
 // Use custom CORS middleware
 app.use(corsMiddleware);
+
+// Use auth middleware to extract and set token for all requests
+app.use(authMiddleware);
 
 // Routes
 app.use('/api/auth', authRoutes);

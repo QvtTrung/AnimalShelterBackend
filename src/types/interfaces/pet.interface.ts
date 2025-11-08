@@ -7,7 +7,7 @@ export interface DirectusPet {
   user_updated?: string;  // reference to directus_users collection
   date_updated?: string;
   name?: string;
-  species?: string;
+  species?: string
   description?: string;
   age?: number;
   age_unit?: 'months' | 'years';

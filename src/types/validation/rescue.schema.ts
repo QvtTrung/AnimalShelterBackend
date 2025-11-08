@@ -13,6 +13,9 @@ export const rescueParticipantSchema = z.object({
   body: z.object({
     users_id: z.string().uuid('Invalid user ID'),
     role: z.enum(['leader', 'member']),
+  }),
+  params: z.object({
+    id: z.string().uuid('Invalid rescue ID'),
   })
 });
 

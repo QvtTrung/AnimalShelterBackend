@@ -33,6 +33,17 @@ export class AdoptionController {
   createAdoption = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const adoption = await this.adoptionService.create(req.body);
+      
+      // Send appointment email if adoption was created successfully
+      if (adoption && adoption.user_id && adoption.pet_id) {
+        try {
+          await this.adoptionService.sendAppointmentEmail(adoption.id, adoption.user_id, adoption.pet_id);
+        } catch (emailError) {
+          console.error('Failed to send appointment email:', emailError);
+          // Continue with the response even if email fails
+        }
+      }
+      
       res.status(201).json(adoption);
     } catch (error) {
       next(error);
