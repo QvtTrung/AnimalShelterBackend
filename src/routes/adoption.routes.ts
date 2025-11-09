@@ -25,4 +25,13 @@ router.get('/user/:userId', validateSchema(userIdSchema), adoptionController.get
 router.get('/pet/:petId', validateSchema(petIdSchema), adoptionController.getPetAdoptions);
 router.patch('/:id/status', validateSchema(updateAdoptionStatusSchema), adoptionController.updateAdoptionStatus);
 
+// Adoption workflow routes
+router.post('/:id/send-confirmation', validateSchema(adoptionIdSchema), adoptionController.sendConfirmation);
+router.post('/:id/confirm', validateSchema(adoptionIdSchema), adoptionController.confirmAdoption);
+router.post('/:id/cancel', validateSchema(adoptionIdSchema), adoptionController.cancelAdoption);
+router.post('/:id/complete', validateSchema(adoptionIdSchema), adoptionController.completeAdoption);
+
+// Maintenance route for auto-canceling expired confirmations
+router.post('/maintenance/auto-cancel-expired', adoptionController.autoCancelExpired);
+
 export default router;
