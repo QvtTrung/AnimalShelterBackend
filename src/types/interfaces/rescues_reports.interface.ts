@@ -4,4 +4,6 @@ export interface RescueReport {
   reports_id?: string;  // reference to reports collection
   status?: string;
   note?: string;
+  created_at?: string;
+  updated_at?: string;
 }

@@ -99,8 +99,35 @@ export class RescueController {
 
   // User's rescues
   getUserRescues = asyncHandler(async (req: Request, res: Response) => {
-    const result = await this.rescueService.getUserRescues(req.params.userId);
-    sendSuccess(res, result.data, 200, { total: result.total });
+    const rescues = await this.rescueService.getUserRescues(req.params.userId);
+    sendSuccess(res, rescues.data, 200, { total: rescues.total });
+  });
+
+  // Workflow actions
+  startRescue = asyncHandler(async (req: Request, res: Response) => {
+    const rescue = await this.rescueService.startRescue(req.params.id);
+    sendSuccess(res, rescue, 200);
+  });
+
+  cancelRescue = asyncHandler(async (req: Request, res: Response) => {
+    const { reason } = req.body;
+    const rescue = await this.rescueService.cancelRescue(req.params.id, reason);
+    sendSuccess(res, rescue, 200);
+  });
+
+  updateReportProgress = asyncHandler(async (req: Request, res: Response) => {
+    const { status, note } = req.body;
+    const rescueReport = await this.rescueService.updateReportProgress(
+      req.params.rescueReportId, 
+      status, 
+      note
+    );
+    sendSuccess(res, rescueReport, 200);
+  });
+
+  completeRescue = asyncHandler(async (req: Request, res: Response) => {
+    const rescue = await this.rescueService.completeRescue(req.params.id);
+    sendSuccess(res, rescue, 200);
   });
 
   // getUserRescues = async (req: Request, res: Response, next: NextFunction) => {

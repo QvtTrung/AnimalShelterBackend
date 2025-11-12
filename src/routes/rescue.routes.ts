@@ -22,6 +22,12 @@ router.post('/:id/reports', validateSchema(rescueReportSchema), rescueController
 router.patch('/reports/:rescueReportId', validateSchema(rescueReportSchema), rescueController.updateReportStatus);
 router.delete('/reports/:rescueReportId', rescueController.removeReport);
 
+// Workflow routes
+router.post('/:id/start', rescueController.startRescue);
+router.post('/:id/cancel', rescueController.cancelRescue);
+router.post('/:id/complete', rescueController.completeRescue);
+router.patch('/reports/:rescueReportId/progress', rescueController.updateReportProgress);
+
 // User's rescues
 router.get('/user/:userId', rescueController.getUserRescues);
 

@@ -23,6 +23,25 @@ export const rescueReportSchema = z.object({
   body: z.object({
     reports_id: z.string().uuid('Invalid report ID'),
     note: z.string().optional(),
-    status: z.enum(['success', 'in_progress', 'cancelled']),
+    status: z.enum(['in_progress', 'success', 'cancelled']).optional(),
+  })
+});
+
+export const rescueReportProgressSchema = z.object({
+  body: z.object({
+    status: z.enum(['in_progress', 'success', 'cancelled']),
+    note: z.string().optional(),
+  }),
+  params: z.object({
+    rescueReportId: z.string(), // Can be number or string depending on DB
+  })
+});
+
+export const cancelRescueSchema = z.object({
+  body: z.object({
+    reason: z.string().optional(),
+  }),
+  params: z.object({
+    id: z.string().uuid('Invalid rescue ID'),
   })
 });
