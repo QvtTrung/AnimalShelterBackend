@@ -75,4 +75,34 @@ export class UserController {
     }
     sendSuccess(res, user, 200);
   });
+
+  // Get current authenticated user
+  getCurrentUser = asyncHandler(async (req: Request, res: Response) => {
+    const userId = (req as any).user?.id;
+    if (!userId) {
+      sendError(res, new AppError(401, 'fail', 'Authentication required'));
+      return;
+    }
+
+    const user = await this.userService.findOneWithRole(userId);
+    if (!user) {
+      sendError(res, new AppError(404, 'fail', 'User not found'));
+      return;
+    }
+    sendSuccess(res, user, 200);
+  });
+
+  // Update current authenticated user's profile
+  updateCurrentUser = asyncHandler(async (req: Request, res: Response) => {
+    const userId = (req as any).user?.id;
+    if (!userId) {
+      sendError(res, new AppError(401, 'fail', 'Authentication required'));
+      return;
+    }
+
+    await this.userService.updateUserProfile(userId, req.body);
+    // Fetch the updated user with role information
+    const userWithRole = await this.userService.findOneWithRole(userId);
+    sendSuccess(res, userWithRole, 200);
+  });
 }

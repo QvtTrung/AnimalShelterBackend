@@ -3,7 +3,6 @@ import { AnyZodObject } from 'zod';
 import {
   validateAndParseAsync,
   validateAndParse,
-  formatZodError,
   validateFileUpload as validateFileUploadUtil,
   fileUploadSchema,
   extractDirectusData

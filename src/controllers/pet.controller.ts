@@ -18,17 +18,20 @@ export class PetController {
     // Handle pagination parameters
     const { page = 1, limit = 10, offset = 0, ...otherQuery } = req.query;
 
-    console.log("Request query:", req.query);
-
     const result = await this.petService.findAll({
       ...otherQuery,
       page: parseInt(page as string),
       limit: parseInt(limit as string),
       offset: parseInt(offset as string),
     });
-
-    console.log("Retrieved pets:", result);
-    sendSuccess(res, result.data, 200, { total: result.total });
+    
+    // Transform pet_images to images format expected by frontend
+    const transformedData = result.data.map((pet: any) => ({
+      ...pet,
+      images: pet.pet_images || [],
+    }));
+    
+    sendSuccess(res, transformedData, 200, { total: result.total });
   });
 
   getPet = asyncHandler(async (req: Request, res: Response) => {
@@ -37,7 +40,14 @@ export class PetController {
       sendError(res, new AppError(404, 'fail', 'Pet not found'));
       return;
     }
-    sendSuccess(res, pet, 200);
+    
+    // Transform pet_images to images format expected by frontend
+    const transformedPet = {
+      ...pet,
+      images: pet.pet_images || [],
+    };
+    
+    sendSuccess(res, transformedPet, 200);
   });
 
   createPet = asyncHandler(async (req: Request, res: Response) => {

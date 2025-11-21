@@ -15,11 +15,16 @@ export function authMiddleware(req: Request, _res: Response, next: NextFunction)
       // Set the token in the Directus client
       // This ensures that all Directus SDK calls in this request will use this token
       directus.setToken(token);
+    } else {
+      // IMPORTANT: Clear token if no auth header is present
+      // This prevents token from previous request persisting in the singleton
+      directus.setToken(null);
     }
     
     next();
   } catch (error) {
     console.error('Error in auth middleware:', error);
+    directus.setToken(null); // Clear token on error
     next();
   }
 }

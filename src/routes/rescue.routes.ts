@@ -14,6 +14,8 @@ router.patch('/:id', validateSchema(rescueSchema.partial()), rescueController.up
 router.delete('/:id', rescueController.deleteRescue);
 
 // Participant management routes
+router.post('/:id/join', rescueController.joinRescue);
+router.post('/:id/leave', rescueController.leaveRescue);
 router.post('/:id/participants', validateSchema(rescueParticipantSchema), rescueController.addParticipant);
 router.delete('/participants/:participantId', rescueController.removeParticipant);
 

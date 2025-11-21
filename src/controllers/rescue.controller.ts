@@ -13,7 +13,38 @@ export class RescueController {
 
   getAllRescues = asyncHandler(async (req: Request, res: Response) => {
     const result = await this.rescueService.findAll(req.query);
-    sendSuccess(res, result.data, 200, { total: result.total });
+    
+    // Parse coordinates and restructure reports data
+    const transformedData = result.data.map((rescue: any) => {
+      if (rescue.reports && Array.isArray(rescue.reports)) {
+        rescue.reports = rescue.reports.map((rescueReport: any) => {
+          // If reports_id is an object (the actual report data), rename it to report
+          if (rescueReport.reports_id && typeof rescueReport.reports_id === 'object') {
+            const reportData = rescueReport.reports_id;
+            
+            // Parse coordinates if needed
+            if (reportData.coordinates && typeof reportData.coordinates === 'string') {
+              try {
+                reportData.coordinates = JSON.parse(reportData.coordinates);
+              } catch (e) {
+                console.warn(`Failed to parse coordinates for report ${reportData.id}`);
+              }
+            }
+            
+            return {
+              ...rescueReport,
+              report_id: reportData.id, // Keep the ID as report_id
+              reports_id: reportData.id, // Also keep as reports_id for compatibility
+              report: reportData // Add as nested report object
+            };
+          }
+          return rescueReport;
+        });
+      }
+      return rescue;
+    });
+    console.log('transformedData', transformedData);
+    sendSuccess(res, transformedData, 200, { total: result.total });
   });
 
   getRescue = asyncHandler(async (req: Request, res: Response) => {
@@ -22,6 +53,35 @@ export class RescueController {
       sendError(res, new AppError(404, 'fail', 'Rescue not found'));
       return;
     }
+    
+    // Parse coordinates and restructure reports data
+    if (rescue.reports && Array.isArray(rescue.reports)) {
+      rescue.reports = rescue.reports.map((rescueReport: any) => {
+        // If reports_id is an object (the actual report data), rename it to report
+        if (rescueReport.reports_id && typeof rescueReport.reports_id === 'object') {
+          const reportData = rescueReport.reports_id;
+          
+          // Parse coordinates if needed
+          if (reportData.coordinates && typeof reportData.coordinates === 'string') {
+            try {
+              reportData.coordinates = JSON.parse(reportData.coordinates);
+            } catch (e) {
+              console.warn(`Failed to parse coordinates for report ${reportData.id}`);
+            }
+          }
+          
+          return {
+            ...rescueReport,
+            report_id: reportData.id, // Keep the ID as report_id
+            reports_id: reportData.id, // Also keep as reports_id for compatibility
+            report: reportData // Add as nested report object
+          };
+        }
+        return rescueReport;
+      });
+    }
+    
+    console.log('rescue', rescue);
     sendSuccess(res, rescue, 200);
   });
 
@@ -66,6 +126,58 @@ export class RescueController {
 
     const participant = await this.rescueService.addParticipant(req.params.id, users_id, role);
     sendSuccess(res, participant, 201);
+  });
+
+  // Simplified join route for authenticated users
+  joinRescue = asyncHandler(async (req: Request, res: Response) => {
+    const userId = (req as any).user?.id;
+    if (!userId) {
+      sendError(res, new AppError(401, 'fail', 'Authentication required'));
+      return;
+    }
+
+    // Check if there are already enough participants
+    const rescue = await this.rescueService.findOne(req.params.id);
+    if (!rescue) {
+      sendError(res, new AppError(404, 'fail', 'Rescue not found'));
+      return;
+    }
+
+    const currentParticipants = rescue.participants?.length || 0;
+    const requiredParticipants = rescue.required_participants || 0;
+
+    if (requiredParticipants > 0 && currentParticipants >= requiredParticipants) {
+      sendError(res, new AppError(400, 'fail', `Cannot join rescue. Maximum required participants (${requiredParticipants}) already reached.`));
+      return;
+    }
+
+    const participant = await this.rescueService.addParticipant(req.params.id, userId, 'member');
+    sendSuccess(res, participant, 201);
+  });
+
+  // Leave route for authenticated users
+  leaveRescue = asyncHandler(async (req: Request, res: Response) => {
+    const userId = (req as any).user?.id;
+    if (!userId) {
+      sendError(res, new AppError(401, 'fail', 'Authentication required'));
+      return;
+    }
+
+    // Find the participant record
+    const rescue = await this.rescueService.findOne(req.params.id);
+    if (!rescue) {
+      sendError(res, new AppError(404, 'fail', 'Rescue not found'));
+      return;
+    }
+
+    const participant = rescue.participants?.find((p: any) => p.users_id === userId);
+    if (!participant) {
+      sendError(res, new AppError(404, 'fail', 'You are not a participant in this rescue'));
+      return;
+    }
+
+    await this.rescueService.removeParticipant(participant.id);
+    sendSuccess(res, { message: 'Successfully left rescue campaign' }, 200);
   });
 
   // updateParticipantStatus = asyncHandler(async (req: Request, res: Response) => {

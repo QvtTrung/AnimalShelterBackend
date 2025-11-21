@@ -6,14 +6,17 @@ if (!config.directus.url) {
   throw new Error('Directus URL is not defined in configuration');
 }
 
+// Main authenticated client for login/register/authenticated operations
+// This client manages authentication state
 const directus = createDirectus(config.directus.url)
   .with(rest())
   .with(authentication('json'));
 
-// Set the token globally if it exists in the configuration
-// if (config.directus.token) {
-//   directus.setToken(config.directus.token);
-// }
+// Public client for unauthenticated reads (pets, reports, etc.)
+// This client never has authentication and works with public permissions
+// NOTE: If you get permission errors for reports_images, check Directus:
+// Settings > Roles & Permissions > Public > reports_images > Read (enable)
+const publicDirectus = createDirectus(config.directus.url).with(rest());
 
-  export { directus };
+export { directus, publicDirectus };
 

@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { AnyZodObject } from 'zod';
-import { validateAndParseAsync, formatZodError } from '../utils/validation';
+import { validateAndParseAsync } from '../utils/validation';
 
 export const validateFormData = (schema: AnyZodObject) => {
   return async (req: Request, _res: Response, next: NextFunction) => {
@@ -12,6 +12,15 @@ export const validateFormData = (schema: AnyZodObject) => {
       // Check if the body is already in the correct format (nested under 'body')
       // or if it's flattened (direct fields)
       if (req.body && Object.keys(req.body).length > 0) {
+        // Parse coordinates if it's a JSON string
+        if (req.body.coordinates && typeof req.body.coordinates === 'string') {
+          try {
+            req.body.coordinates = JSON.parse(req.body.coordinates);
+          } catch (error) {
+            console.error('Failed to parse coordinates:', error);
+          }
+        }
+
         // If the schema expects a body object, but the data is flattened
         if (schema._def.typeName === 'ZodObject' && 
             schema._def.shape().body && 

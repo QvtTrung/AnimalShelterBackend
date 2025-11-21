@@ -192,12 +192,13 @@ export class AuthService {
   }
 
   async logout() {
-    try {
-      await directus.logout();
-      return true;
-    } catch (error) {
-      throw new UnauthorizedError('Error during logout');
-    }
+    // Since we're using stateless JWT authentication and the authMiddleware
+    // clears the token per-request, there's nothing to do on the backend.
+    // The actual logout happens on the frontend by clearing localStorage.
+    // We could call directus.logout() but it's not necessary since:
+    // 1. The token is already cleared by authMiddleware when no auth header is present
+    // 2. We don't maintain server-side sessions
+    return true;
   }
 
   async refreshToken() {

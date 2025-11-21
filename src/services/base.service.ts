@@ -2,11 +2,21 @@ import { directus } from '../config/directus';
 import { createItem, readItems, updateItem, deleteItem } from '@directus/sdk';
 
 export class BaseService<T> {
-  protected sdk = directus;
+  protected sdk = directus;  // Use authenticated client for all operations
   
   constructor(protected collection: string) {}
 
   protected handleError(error: any): never {
+    // Check for Directus authentication errors
+    if (error.message?.includes('Invalid user credentials') || 
+        error.message?.includes('permission') ||
+        error.response?.status === 401 ||
+        error.response?.status === 403) {
+      const authError = new Error('Invalid user credentials.');
+      (authError as any).statusCode = 401;
+      throw authError;
+    }
+    
     if (error.message) {
       throw new Error(error.message);
     }
@@ -24,7 +34,7 @@ export class BaseService<T> {
       const { page: _, limit: __, pageSize: ___, ...restQuery } = query || {};
 
       // First get total count
-      const countResponse = await directus.request(readItems(this.collection, {
+      const countResponse = await this.sdk.request(readItems(this.collection, {
         aggregate: { count: '*' },
         ...restQuery?.filter ? { filter: restQuery.filter } : {},
       }));
@@ -32,7 +42,7 @@ export class BaseService<T> {
       const total = countResponse?.[0]?.count ?? 0;
 
       // Then get paginated data
-      const items = await directus.request(readItems(this.collection, {
+      const items = await this.sdk.request(readItems(this.collection, {
         ...restQuery,
         limit,
         offset,
@@ -49,7 +59,7 @@ export class BaseService<T> {
 
   async findOne(id: string, query?: any) {
     try {
-      const items = await directus.request(readItems(this.collection, {
+      const items = await this.sdk.request(readItems(this.collection, {
         ...query,
         filter: { id: { _eq: id } },
         limit: 1,
@@ -62,7 +72,7 @@ export class BaseService<T> {
 
   async create(data: Partial<T>) {
     try {
-      return await directus.request(createItem(this.collection, data));
+      return await this.sdk.request(createItem(this.collection, data));
     } catch (error) {
       throw error;
     }
@@ -70,7 +80,7 @@ export class BaseService<T> {
 
   async update(id: string, data: Partial<T>) {
     try {
-      return await directus.request(updateItem(this.collection, id, data));
+      return await this.sdk.request(updateItem(this.collection, id, data));
     } catch (error) {
       throw error;
     }
@@ -78,7 +88,7 @@ export class BaseService<T> {
 
   async delete(id: string) {
     try {
-      await directus.request(deleteItem(this.collection, id));
+      await this.sdk.request(deleteItem(this.collection, id));
       return true;
     } catch (error) {
       throw error;

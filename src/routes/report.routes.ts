@@ -14,6 +14,9 @@ import {
 const router = Router();
 const reportController = new ReportController();
 
+// Note: Auth middleware is already applied globally in server.ts
+// No need to apply it again here
+
 // Report routes
 router.get('/', reportController.getAllReports);
 router.get('/pending', reportController.getPendingReports);

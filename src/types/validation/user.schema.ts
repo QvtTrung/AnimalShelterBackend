@@ -20,6 +20,10 @@ export const updateUserSchema = z.object({
   })
 });
 
+export const updateProfileSchema = z.object({
+  body: createUserSchema.shape.body.partial()
+});
+
 export const userIdSchema = z.object({
   params: z.object({
     id: z.string().uuid('Invalid user ID')

@@ -18,8 +18,6 @@ export class ReportController {
     // Handle pagination parameters
     const { page = 1, limit = 10, offset = 0, ...otherQuery } = req.query;
 
-    // console.log("Request query:", req.query);
-
     const result = await this.reportService.findAll({
       ...otherQuery,
       page: parseInt(page as string),
@@ -27,8 +25,28 @@ export class ReportController {
       offset: parseInt(offset as string),
     });
 
-    // console.log("Retrieved reports:", result);
-    sendSuccess(res, result.data, 200, { total: result.total });
+    // Transform report_images to images and parse coordinates
+    const transformedData = result.data.map((report: any) => {
+      const { reports_image, coordinates, ...rest } = report;
+      
+      // Parse coordinates if it's a string
+      let parsedCoordinates = coordinates;
+      if (typeof coordinates === 'string') {
+        try {
+          parsedCoordinates = JSON.parse(coordinates);
+        } catch (e) {
+          console.warn(`Failed to parse coordinates for report ${report.id}`);
+        }
+      }
+      
+      return {
+        ...rest,
+        coordinates: parsedCoordinates,
+        images: reports_image || [],
+      };
+    });
+
+    sendSuccess(res, transformedData, 200, { total: result.total });
   });
 
   getReport = asyncHandler(async (req: Request, res: Response) => {
@@ -37,7 +55,28 @@ export class ReportController {
       sendError(res, new AppError(404, 'fail', 'Report not found'));
       return;
     }
-    sendSuccess(res, report, 200);
+    
+    // Transform report_images to images and parse coordinates
+    const { reports_image, coordinates, ...rest } = report;
+    
+    // Parse coordinates if it's a string
+    let parsedCoordinates = coordinates;
+    if (typeof coordinates === 'string') {
+      try {
+        parsedCoordinates = JSON.parse(coordinates);
+      } catch (e) {
+        console.warn(`Failed to parse coordinates for report ${report.id}`);
+      }
+    }
+    
+    const transformedReport = {
+      ...rest,
+      coordinates: parsedCoordinates,
+      images: reports_image || [],
+    };
+    console.log('Transformed Report:', transformedReport);
+    
+    sendSuccess(res, transformedReport, 200);
   });
 
   createReport = asyncHandler(async (req: Request, res: Response) => {

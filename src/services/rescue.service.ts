@@ -10,13 +10,26 @@ export class RescueService extends BaseService<DirectusRescue> {
 
   async findAll(query?: any): Promise<{ data: any[]; total: number }> {
     try {
-      const { page = 1, limit = 10, ...restQuery } = query || {};
+      const { page = 1, limit = 10, status, ...restQuery } = query || {};
       const offset = (page - 1) * limit;
 
-      // Get total count
+      // Build filter object
+      let filter: any = {};
+      
+      // Add status filter
+      if (status) {
+        filter.status = { _eq: status };
+      }
+      
+      // Merge with any existing filters from restQuery
+      if (restQuery?.filter) {
+        filter = { ...filter, ...restQuery.filter };
+      }
+
+      // Get total count with filter
       const countResponse = await this.sdk.request(readItems(this.collection, {
         aggregate: { count: '*' },
-        ...restQuery?.filter ? { filter: restQuery.filter } : {},
+        ...(Object.keys(filter).length > 0 ? { filter } : {}),
       }));
       
       const total = countResponse?.[0]?.count ?? 0;
@@ -35,19 +48,16 @@ export class RescueService extends BaseService<DirectusRescue> {
           'participants.user.last_name',
           'participants.user.avatar',
           'reports.id',
-          'reports.reports_id',
+          'reports.reports_id.*',
           'reports.status',
           'reports.note',
-          'reports.updated_at',
-          'reports.report.id',
-          'reports.report.title',
-          'reports.report.status',
-          'reports.report.urgency_level',
-          'reports.report.location'
+          'reports.updated_at'
         ],
         limit,
         offset,
+        ...(Object.keys(filter).length > 0 ? { filter } : {}),
       }));
+      console.log('items',items);
 
       return {
         data: Array.isArray(items) ? items : [],
@@ -74,18 +84,14 @@ export class RescueService extends BaseService<DirectusRescue> {
           'participants.user.last_name',
           'participants.user.avatar',
           'reports.id',
-          'reports.reports_id',
+          'reports.reports_id.*',
           'reports.status',
           'reports.note',
-          'reports.updated_at',
-          'reports.report.id',
-          'reports.report.title',
-          'reports.report.status',
-          'reports.report.urgency_level',
-          'reports.report.location'
+          'reports.updated_at'
         ],
         limit: 1,
       }));
+      console.log('items',items);
       return items?.[0];
     } catch (error) {
       throw error;
@@ -197,7 +203,14 @@ export class RescueService extends BaseService<DirectusRescue> {
           }
         }
       });
-    } catch (error) {
+    } catch (error: any) {
+      // Check if it's an authentication error from Directus
+      if (error.message?.includes('Invalid user credentials') || 
+          error.message?.includes('permission') ||
+          error.response?.status === 401 ||
+          error.response?.status === 403) {
+        throw new AppError(401, 'fail', 'Invalid user credentials.');
+      }
       throw this.handleError(error);
     }
   }

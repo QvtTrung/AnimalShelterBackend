@@ -36,7 +36,14 @@ export class AdoptionService extends BaseService<DirectusAdoption> {
       // console.log('✅ AdoptionService.findAll - First result:', JSON.stringify(result.data[0], null, 2));
 
       return result;
-    } catch (error) {
+    } catch (error: any) {
+      // Check if it's an authentication error from Directus
+      if (error.message?.includes('Invalid user credentials') || 
+          error.message?.includes('permission') ||
+          error.response?.status === 401 ||
+          error.response?.status === 403) {
+        throw new AppError(401, 'fail', 'Invalid user credentials.');
+      }
       throw this.handleError(error);
     }
   }
