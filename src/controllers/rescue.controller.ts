@@ -11,6 +11,44 @@ export class RescueController {
     this.rescueService = new RescueService();
   }
 
+  // Helper method to check if user is a leader of the rescue
+  private async checkLeaderPermission(rescueId: string, appUserId: string): Promise<boolean> {
+    const rescue = await this.rescueService.findOne(rescueId);
+    if (!rescue) {
+      return false;
+    }
+    
+    const participant = rescue.participants?.find((p: any) => p.users_id === appUserId);
+    return participant?.role === 'leader';
+  }
+
+  // Helper method to get app user ID from authenticated Directus user
+  private async getAuthenticatedUserId(): Promise<string> {
+    const { readMe, readItems } = await import('@directus/sdk');
+    const { directus } = await import('../config/directus');
+    
+    const currentUser = await directus.request(readMe({
+      fields: ['id']
+    }));
+    
+    if (!currentUser || !currentUser.id) {
+      throw new AppError(401, 'fail', 'Authentication required');
+    }
+    
+    // Get the application user ID from the directus user ID
+    const appUsers = await directus.request(readItems('users', {
+      filter: { directus_user_id: { _eq: currentUser.id } },
+      fields: ['id'],
+      limit: 1
+    }));
+    
+    if (!appUsers || appUsers.length === 0) {
+      throw new AppError(404, 'fail', 'User profile not found');
+    }
+    
+    return appUsers[0].id;
+  }
+
   getAllRescues = asyncHandler(async (req: Request, res: Response) => {
     const result = await this.rescueService.findAll(req.query);
     
@@ -130,54 +168,64 @@ export class RescueController {
 
   // Simplified join route for authenticated users
   joinRescue = asyncHandler(async (req: Request, res: Response) => {
-    const userId = (req as any).user?.id;
-    if (!userId) {
-      sendError(res, new AppError(401, 'fail', 'Authentication required'));
-      return;
+    try {
+      const userId = await this.getAuthenticatedUserId();
+
+      // Check if there are already enough participants
+      const rescue = await this.rescueService.findOne(req.params.id);
+      if (!rescue) {
+        sendError(res, new AppError(404, 'fail', 'Rescue not found'));
+        return;
+      }
+
+      const currentParticipants = rescue.participants?.length || 0;
+      const requiredParticipants = rescue.required_participants || 0;
+
+      if (requiredParticipants > 0 && currentParticipants >= requiredParticipants) {
+        sendError(res, new AppError(400, 'fail', `Cannot join rescue. Maximum required participants (${requiredParticipants}) already reached.`));
+        return;
+      }
+
+      const participant = await this.rescueService.addParticipant(req.params.id, userId, 'member');
+      sendSuccess(res, participant, 201);
+    } catch (error: any) {
+      if (error.message?.includes('Authentication required') || 
+          error.message?.includes('User profile not found')) {
+        sendError(res, error);
+        return;
+      }
+      throw error;
     }
-
-    // Check if there are already enough participants
-    const rescue = await this.rescueService.findOne(req.params.id);
-    if (!rescue) {
-      sendError(res, new AppError(404, 'fail', 'Rescue not found'));
-      return;
-    }
-
-    const currentParticipants = rescue.participants?.length || 0;
-    const requiredParticipants = rescue.required_participants || 0;
-
-    if (requiredParticipants > 0 && currentParticipants >= requiredParticipants) {
-      sendError(res, new AppError(400, 'fail', `Cannot join rescue. Maximum required participants (${requiredParticipants}) already reached.`));
-      return;
-    }
-
-    const participant = await this.rescueService.addParticipant(req.params.id, userId, 'member');
-    sendSuccess(res, participant, 201);
   });
 
   // Leave route for authenticated users
   leaveRescue = asyncHandler(async (req: Request, res: Response) => {
-    const userId = (req as any).user?.id;
-    if (!userId) {
-      sendError(res, new AppError(401, 'fail', 'Authentication required'));
-      return;
-    }
+    try {
+      const userId = await this.getAuthenticatedUserId();
 
-    // Find the participant record
-    const rescue = await this.rescueService.findOne(req.params.id);
-    if (!rescue) {
-      sendError(res, new AppError(404, 'fail', 'Rescue not found'));
-      return;
-    }
+      // Find the participant record
+      const rescue = await this.rescueService.findOne(req.params.id);
+      if (!rescue) {
+        sendError(res, new AppError(404, 'fail', 'Rescue not found'));
+        return;
+      }
 
-    const participant = rescue.participants?.find((p: any) => p.users_id === userId);
-    if (!participant) {
-      sendError(res, new AppError(404, 'fail', 'You are not a participant in this rescue'));
-      return;
-    }
+      const participant = rescue.participants?.find((p: any) => p.users_id === userId);
+      if (!participant) {
+        sendError(res, new AppError(404, 'fail', 'You are not a participant in this rescue'));
+        return;
+      }
 
-    await this.rescueService.removeParticipant(participant.id);
-    sendSuccess(res, { message: 'Successfully left rescue campaign' }, 200);
+      await this.rescueService.removeParticipant(participant.id);
+      sendSuccess(res, { message: 'Successfully left rescue campaign' }, 200);
+    } catch (error: any) {
+      if (error.message?.includes('Authentication required') || 
+          error.message?.includes('User profile not found')) {
+        sendError(res, error);
+        return;
+      }
+      throw error;
+    }
   });
 
   // updateParticipantStatus = asyncHandler(async (req: Request, res: Response) => {
@@ -217,29 +265,117 @@ export class RescueController {
 
   // Workflow actions
   startRescue = asyncHandler(async (req: Request, res: Response) => {
-    const rescue = await this.rescueService.startRescue(req.params.id);
-    sendSuccess(res, rescue, 200);
+    try {
+      const userId = await this.getAuthenticatedUserId();
+
+      // Check if user is a leader
+      const isLeader = await this.checkLeaderPermission(req.params.id, userId);
+      if (!isLeader) {
+        sendError(res, new AppError(403, 'fail', 'Only rescue leaders can start the campaign'));
+        return;
+      }
+
+      const rescue = await this.rescueService.startRescue(req.params.id);
+      sendSuccess(res, rescue, 200);
+    } catch (error: any) {
+      if (error.message?.includes('Authentication required') || 
+          error.message?.includes('User profile not found')) {
+        sendError(res, error);
+        return;
+      }
+      throw error;
+    }
   });
 
   cancelRescue = asyncHandler(async (req: Request, res: Response) => {
-    const { reason } = req.body;
-    const rescue = await this.rescueService.cancelRescue(req.params.id, reason);
-    sendSuccess(res, rescue, 200);
+    try {
+      const userId = await this.getAuthenticatedUserId();
+
+      // Check if user is a leader
+      const isLeader = await this.checkLeaderPermission(req.params.id, userId);
+      if (!isLeader) {
+        sendError(res, new AppError(403, 'fail', 'Only rescue leaders can cancel the campaign'));
+        return;
+      }
+
+      const { reason } = req.body;
+      const rescue = await this.rescueService.cancelRescue(req.params.id, reason);
+      sendSuccess(res, rescue, 200);
+    } catch (error: any) {
+      if (error.message?.includes('Authentication required') || 
+          error.message?.includes('User profile not found')) {
+        sendError(res, error);
+        return;
+      }
+      throw error;
+    }
   });
 
   updateReportProgress = asyncHandler(async (req: Request, res: Response) => {
-    const { status, note } = req.body;
-    const rescueReport = await this.rescueService.updateReportProgress(
-      req.params.rescueReportId, 
-      status, 
-      note
-    );
-    sendSuccess(res, rescueReport, 200);
+    try {
+      const userId = await this.getAuthenticatedUserId();
+
+      // Get the rescue ID from the rescue report
+      const { readItem } = await import('@directus/sdk');
+      const { directus } = await import('../config/directus');
+      const rescueReport = await directus.request(readItem('rescues_reports', req.params.rescueReportId, {
+        fields: ['rescues_id']
+      }));
+
+      if (!rescueReport) {
+        sendError(res, new AppError(404, 'fail', 'Rescue report not found'));
+        return;
+      }
+
+      const rescueId = typeof rescueReport.rescues_id === 'object' 
+        ? rescueReport.rescues_id.id 
+        : rescueReport.rescues_id;
+
+      // Check if user is a leader
+      const isLeader = await this.checkLeaderPermission(rescueId, userId);
+      if (!isLeader) {
+        sendError(res, new AppError(403, 'fail', 'Only rescue leaders can update report progress'));
+        return;
+      }
+
+      const { status, note } = req.body;
+      const updatedRescueReport = await this.rescueService.updateReportProgress(
+        req.params.rescueReportId, 
+        status, 
+        note
+      );
+      sendSuccess(res, updatedRescueReport, 200);
+    } catch (error: any) {
+      if (error.message?.includes('Authentication required') || 
+          error.message?.includes('User profile not found')) {
+        sendError(res, error);
+        return;
+      }
+      throw error;
+    }
   });
 
   completeRescue = asyncHandler(async (req: Request, res: Response) => {
-    const rescue = await this.rescueService.completeRescue(req.params.id);
-    sendSuccess(res, rescue, 200);
+    try {
+      const userId = await this.getAuthenticatedUserId();
+
+      // Check if user is a leader
+      const isLeader = await this.checkLeaderPermission(req.params.id, userId);
+      if (!isLeader) {
+        sendError(res, new AppError(403, 'fail', 'Only rescue leaders can complete the campaign'));
+        return;
+      }
+
+      const rescue = await this.rescueService.completeRescue(req.params.id);
+      sendSuccess(res, rescue, 200);
+    } catch (error: any) {
+      if (error.message?.includes('Authentication required') || 
+          error.message?.includes('User profile not found')) {
+        sendError(res, error);
+        return;
+      }
+      throw error;
+    }
   });
 
   // getUserRescues = async (req: Request, res: Response, next: NextFunction) => {

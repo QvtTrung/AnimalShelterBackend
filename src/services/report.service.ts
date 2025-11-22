@@ -225,4 +225,62 @@ export class ReportService extends BaseService<Report> {
       throw error;
     }
   }
+
+  async claimReport(reportId: string, userId: string) {
+    try {
+      // Import createItem directly from SDK
+      const { createItem } = await import('@directus/sdk');
+      
+      // Get the report details
+      const report = await this.findOne(reportId);
+      if (!report) {
+        throw new AppError(404, 'fail', 'Report not found');
+      }
+
+      // Create a rescue campaign with in_progress status
+      const rescueData = {
+        title: `Rescue for: ${report.title}`,
+        description: `Emergency rescue for ${report.species} at ${report.location}`,
+        status: 'in_progress',
+        required_participants: 1,
+        start_date: new Date(),
+      };
+
+      const rescue = await this.sdk.request(createItem('rescues', rescueData));
+
+      // Link the report to the rescue in rescues_reports junction table
+      const rescueReportData = {
+        rescues_id: rescue.id,
+        reports_id: reportId,
+        status: 'in_progress',
+        note: 'Report claimed and rescue initiated',
+      };
+
+      await this.sdk.request(createItem('rescues_reports', rescueReportData));
+
+      // Add the claiming user as a participant in rescues_users junction table
+      const rescueUserData = {
+        rescues_id: rescue.id,
+        users_id: userId,
+        role: 'leader',
+        created_at: new Date(),
+        updated_at: new Date(),
+      };
+
+      await this.sdk.request(createItem('rescues_users', rescueUserData));
+
+      // Update the report status to 'assigned'
+      await this.updateReportStatus(reportId, 'assigned');
+
+      // Return the created rescue with full details
+      return {
+        rescue,
+        report_id: reportId,
+        message: 'Report claimed successfully and rescue campaign created',
+      };
+    } catch (error) {
+      console.error('Error claiming report:', error);
+      throw error;
+    }
+  }
 }

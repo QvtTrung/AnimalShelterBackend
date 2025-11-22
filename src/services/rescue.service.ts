@@ -250,8 +250,9 @@ export class RescueService extends BaseService<DirectusRescue> {
   }
 
   /**
-   * Cancel a planned rescue
+   * Cancel a rescue
    * Changes rescue status to 'cancelled' and resets all related reports to 'pending'
+   * Can cancel rescues that are 'planned' or 'in_progress'
    */
   async cancelRescue(rescueId: string, reason?: string) {
     try {
@@ -260,8 +261,8 @@ export class RescueService extends BaseService<DirectusRescue> {
         throw new AppError(404, 'fail', 'Rescue not found');
       }
 
-      if (rescue.status !== 'planned') {
-        throw new AppError(400, 'fail', 'Can only cancel rescues with planned status');
+      if (rescue.status !== 'planned' && rescue.status !== 'in_progress') {
+        throw new AppError(400, 'fail', 'Can only cancel rescues with planned or in_progress status');
       }
 
       // Update all related reports back to 'pending' status

@@ -199,4 +199,66 @@ export class ReportController {
     const images = await this.reportImageService.findByReportId(req.params.id);
     sendSuccess(res, images, 200);
   });
+
+  claimReport = asyncHandler(async (req: Request, res: Response) => {
+    const reportId = req.params.id;
+    
+    // Get current user from directus using the token set by auth middleware
+    const { readMe } = await import('@directus/sdk');
+    const { directus } = await import('../config/directus');
+    
+    try {
+      // Get the authenticated user
+      const currentUser = await directus.request(readMe({
+        fields: ['id']
+      }));
+      
+      if (!currentUser || !currentUser.id) {
+        sendError(res, new AppError(401, 'fail', 'Authentication required to claim report'));
+        return;
+      }
+      
+      // Get the application user ID from the directus user ID
+      const { readItems } = await import('@directus/sdk');
+      const appUsers = await directus.request(readItems('users', {
+        filter: { directus_user_id: { _eq: currentUser.id } },
+        fields: ['id'],
+        limit: 1
+      }));
+      
+      if (!appUsers || appUsers.length === 0) {
+        sendError(res, new AppError(404, 'fail', 'User profile not found'));
+        return;
+      }
+      
+      const userId = appUsers[0].id;
+      
+      // Get the report first
+      const report = await this.reportService.findOne(reportId);
+      if (!report) {
+        sendError(res, new AppError(404, 'fail', 'Report not found'));
+        return;
+      }
+
+      // Check if report is claimable (must be pending status)
+      if (report.status !== 'pending') {
+        sendError(res, new AppError(400, 'fail', 'Report is not available for claiming'));
+        return;
+      }
+
+      // Allow claiming of any urgency level
+
+      // Create a rescue campaign for this report
+      const rescue = await this.reportService.claimReport(reportId, userId);
+      sendSuccess(res, rescue, 201);
+    } catch (error: any) {
+      if (error.message?.includes('Invalid user credentials') || 
+          error.message?.includes('permission') ||
+          error.response?.status === 401) {
+        sendError(res, new AppError(401, 'fail', 'Authentication required to claim report'));
+        return;
+      }
+      throw error;
+    }
+  });
 }

@@ -28,6 +28,7 @@ router.delete('/:id', validateSchema(reportIdSchema), reportController.deleteRep
 // Additional report routes
 router.get('/user/:userId', reportController.getUserReports);
 router.patch('/:id/status', reportController.updateReportStatus);
+router.post('/:id/claim', reportController.claimReport);
 
 // Report image routes
 router.get('/:id/images', validateSchema(reportIdSchema), reportController.getReportImages);
