@@ -74,7 +74,7 @@ export class ReportController {
       coordinates: parsedCoordinates,
       images: reports_image || [],
     };
-    console.log('Transformed Report:', transformedReport);
+    // console.log('Transformed Report:', transformedReport);
     
     sendSuccess(res, transformedReport, 200);
   });

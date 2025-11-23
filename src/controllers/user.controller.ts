@@ -39,15 +39,13 @@ export class UserController {
 
   createUser = asyncHandler(async (req: Request, res: Response) => {
     const user = await this.userService.createUserWithPassword(req.body);
-    // Don't return the password in the response
-    const { password, ...userWithoutPassword } = user as any;
     // Fetch the user with role information
     const userWithRole = await this.userService.findOneWithRole(user.id);
     sendSuccess(res, userWithRole, 201);
   });
 
   updateUser = asyncHandler(async (req: Request, res: Response) => {
-    const user = await this.userService.updateUserProfile(req.params.id, req.body);
+    await this.userService.updateUserProfile(req.params.id, req.body);
     // Fetch the user with role information
     const userWithRole = await this.userService.findOneWithRole(req.params.id);
     sendSuccess(res, userWithRole, 200);
@@ -77,32 +75,14 @@ export class UserController {
   });
 
   // Get current authenticated user
-  getCurrentUser = asyncHandler(async (req: Request, res: Response) => {
-    const userId = (req as any).user?.id;
-    if (!userId) {
-      sendError(res, new AppError(401, 'fail', 'Authentication required'));
-      return;
-    }
-
-    const user = await this.userService.findOneWithRole(userId);
-    if (!user) {
-      sendError(res, new AppError(404, 'fail', 'User not found'));
-      return;
-    }
+  getCurrentUser = asyncHandler(async (_req: Request, res: Response) => {
+    const user = await this.userService.getCurrentAuthenticatedUser();
     sendSuccess(res, user, 200);
   });
 
   // Update current authenticated user's profile
   updateCurrentUser = asyncHandler(async (req: Request, res: Response) => {
-    const userId = (req as any).user?.id;
-    if (!userId) {
-      sendError(res, new AppError(401, 'fail', 'Authentication required'));
-      return;
-    }
-
-    await this.userService.updateUserProfile(userId, req.body);
-    // Fetch the updated user with role information
-    const userWithRole = await this.userService.findOneWithRole(userId);
-    sendSuccess(res, userWithRole, 200);
+    const user = await this.userService.updateCurrentAuthenticatedUser(req.body);
+    sendSuccess(res, user, 200);
   });
 }

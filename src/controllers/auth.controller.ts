@@ -52,9 +52,10 @@ export class AuthController {
     }
   });
 
-  refreshToken = asyncHandler(async (_req: Request, res: Response) => {
+  refreshToken = asyncHandler(async (req: Request, res: Response) => {
     try {
-      const result = await this.authService.refreshToken();
+      const { refresh_token } = req.body;
+      const result = await this.authService.refreshToken(refresh_token);
       sendSuccess(res, result, 200);
     } catch (error) {
       return sendError(res, error);

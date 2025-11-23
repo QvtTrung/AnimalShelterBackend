@@ -37,6 +37,7 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
   const authHeader = req.headers.authorization;
   
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    console.log('requireAuth: No authorization header found');
     res.status(401).json({
       status: 'error',
       message: 'Authentication required',
@@ -46,6 +47,7 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
   }
   
   const token = authHeader.substring(7);
+  console.log('requireAuth: Setting token in Directus client (first 20 chars):', token.substring(0, 20) + '...');
   directus.setToken(token);
   
   next();

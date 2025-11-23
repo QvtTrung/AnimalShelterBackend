@@ -57,7 +57,7 @@ export class RescueService extends BaseService<DirectusRescue> {
         offset,
         ...(Object.keys(filter).length > 0 ? { filter } : {}),
       }));
-      console.log('items',items);
+      // console.log('items',items);
 
       return {
         data: Array.isArray(items) ? items : [],
@@ -91,7 +91,7 @@ export class RescueService extends BaseService<DirectusRescue> {
         ],
         limit: 1,
       }));
-      console.log('items',items);
+      // console.log('items',items);
       return items?.[0];
     } catch (error) {
       throw error;

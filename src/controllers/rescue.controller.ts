@@ -81,7 +81,7 @@ export class RescueController {
       }
       return rescue;
     });
-    console.log('transformedData', transformedData);
+    // console.log('transformedData', transformedData);
     sendSuccess(res, transformedData, 200, { total: result.total });
   });
 
@@ -119,7 +119,7 @@ export class RescueController {
       });
     }
     
-    console.log('rescue', rescue);
+    // console.log('rescue', rescue);
     sendSuccess(res, rescue, 200);
   });
 
@@ -145,7 +145,7 @@ export class RescueController {
   // Participant management
   addParticipant = asyncHandler(async (req: Request, res: Response) => {
     const { users_id, role } = req.body;
-    console.log ('Adding participant with users_id:', users_id, 'and role:', role);
+    // console.log ('Adding participant with users_id:', users_id, 'and role:', role);
 
     // Check if there are already enough participants
     const rescue = await this.rescueService.findOne(req.params.id);

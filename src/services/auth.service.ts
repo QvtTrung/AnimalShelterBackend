@@ -2,7 +2,7 @@ import { directus } from '../config/directus';
 // import  config  from '../config/index';
 import { UnauthorizedError, DuplicateEmailError } from '../utils/errors';
 // import { logger } from '../utils/logger';
-import { readMe, registerUser, readUsers, readItems, createItem, deleteItem } from '@directus/sdk';
+import { readMe, registerUser, readUsers, readItems, createItem, deleteItem, refresh } from '@directus/sdk';
 import { DirectusUser, AppUser, AppUserOrNull, RegisterPayload, UsersQuery } from '../types/directus';
 import { extractDirectusData } from '../utils/validation';
 import config from '../config/index';
@@ -201,11 +201,27 @@ export class AuthService {
     return true;
   }
 
-  async refreshToken() {
+  async refreshToken(refreshToken?: string) {
     try {
-      // Refresh the access token using Directus SDK
-      // This will use the refresh token cookie automatically
-      const tokens = await directus.refresh();
+      let tokens;
+      
+      // If refresh token is provided in the request, use it to get new tokens
+      if (refreshToken) {
+        // Use the Directus SDK refresh function with JSON mode
+        const result = await directus.request(refresh({ mode: 'json', refresh_token: refreshToken }));
+        
+        if (!result || !result.access_token) {
+          throw new UnauthorizedError('Failed to obtain new access token');
+        }
+        
+        tokens = result;
+        
+        // Set the new access token in Directus client
+        directus.setToken(tokens.access_token);
+      } else {
+        // Try to use the SDK's refresh method (for cookie-based refresh)
+        tokens = await directus.refresh();
+      }
       
       if (!tokens || !tokens.access_token) {
         throw new UnauthorizedError('Failed to obtain new access token');

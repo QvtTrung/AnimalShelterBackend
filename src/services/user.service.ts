@@ -1,7 +1,7 @@
 import { BaseService } from './base.service';
 import { AppUser, CreateUserPayload, DirectusUser } from '../types/directus';
 import { directus } from '../config/directus';
-import { createUser, readUsers, createItem, deleteItem, updateItem, updateUser, readRoles, readItems } from '@directus/sdk';
+import { createUser, readUsers, createItem, deleteItem, updateItem, updateUser, readRoles, readItems, readMe } from '@directus/sdk';
 import { extractDirectusData } from '../utils/validation';
 import { DuplicateEmailError } from '../utils/errors';
 
@@ -145,24 +145,48 @@ export class UserService extends BaseService<AppUser> {
       const user = await this.findOne(id);
       if (!user || !user.directus_user_id) return user;
 
-      // Get the Directus user with role
-      const directusUsers = await directus.request(readUsers({
-        filter: { id: { _eq: user.directus_user_id } },
-        fields: ['id', 'role'],
-        limit: 1
-      }));
-
-      if (directusUsers && directusUsers.length > 0 && directusUsers[0].role) {
-        // Get the role name
-        const roles = await directus.request(readRoles({
-          filter: { id: { _eq: directusUsers[0].role } },
-          fields: ['id', 'name'],
-          limit: 1
+      // Try to get the role from readMe() if this is the authenticated user
+      // Otherwise, try to get it from readUsers (which requires admin permissions)
+      try {
+        const currentUser = await directus.request(readMe({
+          fields: ['id', 'role']
         }));
+        
+        // Check if this is the same user as the one we're fetching
+        if (currentUser && currentUser.id === user.directus_user_id && currentUser.role) {
+          // Get the role name
+          const roles = await directus.request(readRoles({
+            filter: { id: { _eq: currentUser.role } },
+            fields: ['id', 'name'],
+            limit: 1
+          }));
 
-        if (roles && roles.length > 0) {
-          user.role = roles[0].name;
+          if (roles && roles.length > 0) {
+            user.role = roles[0].name;
+          }
+        } else {
+          // If not the same user, try readUsers (requires admin)
+          const directusUsers = await directus.request(readUsers({
+            filter: { id: { _eq: user.directus_user_id } },
+            fields: ['id', 'role'],
+            limit: 1
+          }));
+
+          if (directusUsers && directusUsers.length > 0 && directusUsers[0].role) {
+            const roles = await directus.request(readRoles({
+              filter: { id: { _eq: directusUsers[0].role } },
+              fields: ['id', 'name'],
+              limit: 1
+            }));
+
+            if (roles && roles.length > 0) {
+              user.role = roles[0].name;
+            }
+          }
         }
+      } catch (roleError) {
+        // If we can't get the role, just return the user without it
+        console.log('Could not fetch role for user:', roleError);
       }
 
       return user;
@@ -290,6 +314,64 @@ export class UserService extends BaseService<AppUser> {
       // Update app user data
       return await this.update(id, appUserData);
     } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async getCurrentAuthenticatedUser() {
+    try {
+      // Get the user from Directus
+      const directusUser = await directus.request(readMe({
+        fields: ['id', 'email', 'first_name', 'last_name']
+      }));
+
+      if (!directusUser || !directusUser.id) {
+        throw new Error('No authenticated user found');
+      }
+
+      // Get the application user data using the Directus user ID
+      const user = await this.findByDirectusUserId(directusUser.id);
+      
+      if (!user) {
+        throw new Error('User not found');
+      }
+      
+      // Get the user with role information
+      const userWithRole = await this.findOneWithRole(user.id);
+      return userWithRole;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async updateCurrentAuthenticatedUser(data: Partial<AppUser>) {
+    try {
+      // Get the user from Directus
+      console.log('Attempting to get current user with readMe...');
+      const directusUser = await directus.request(readMe({
+        fields: ['id', 'email', 'first_name', 'last_name']
+      }));
+      console.log('Got directus user:', directusUser);
+
+      if (!directusUser || !directusUser.id) {
+        throw new Error('No authenticated user found');
+      }
+
+      // Get the application user data using the Directus user ID
+      const user = await this.findByDirectusUserId(directusUser.id);
+      
+      if (!user) {
+        throw new Error('User not found');
+      }
+
+      // Update the user profile
+      await this.updateUserProfile(user.id, data);
+      
+      // Fetch the updated user with role information
+      const userWithRole = await this.findOneWithRole(user.id);
+      return userWithRole;
+    } catch (error: any) {
+      console.error('Error in updateCurrentAuthenticatedUser:', error.message, error.errors);
       throw this.handleError(error);
     }
   }

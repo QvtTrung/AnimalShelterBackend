@@ -61,11 +61,11 @@ export class AdoptionService extends BaseService<DirectusAdoption> {
         ]
       };
 
-      console.log('📋 AdoptionService.findOne - Query:', JSON.stringify(queryWithFields, null, 2));
+      // console.log('📋 AdoptionService.findOne - Query:', JSON.stringify(queryWithFields, null, 2));
 
       const result = await super.findOne(id, queryWithFields);
       
-      console.log('✅ AdoptionService.findOne - Result:', JSON.stringify(result, null, 2));
+      // console.log('✅ AdoptionService.findOne - Result:', JSON.stringify(result, null, 2));
 
       return result;
     } catch (error) {

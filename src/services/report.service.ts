@@ -80,7 +80,7 @@ export class ReportService extends BaseService<Report> {
         ...(Object.keys(filter).length > 0 ? { filter } : {}),
       }));
       
-      console.log('[ReportService] Sample report from findAll:', items?.[0]?.user_created);
+      // console.log('[ReportService] Sample report from findAll:', items?.[0]?.user_created);
 
       // Manually fetch user_created data from 'users' collection for each report
       const itemsWithUsers = await Promise.all(
@@ -142,9 +142,9 @@ export class ReportService extends BaseService<Report> {
       }));
 
       const report = items?.[0];
-      console.log('[ReportService] Raw report from Directus:', JSON.stringify(report, null, 2));
-      console.log('[ReportService] user_created field:', report?.user_created);
-      console.log('[ReportService] user_created type:', typeof report?.user_created);
+      // console.log('[ReportService] Raw report from Directus:', JSON.stringify(report, null, 2));
+      // console.log('[ReportService] user_created field:', report?.user_created);
+      // console.log('[ReportService] user_created type:', typeof report?.user_created);
       if (!report) return null;
 
       // Manually fetch user_created data from 'users' collection if it exists and is a UUID string
@@ -159,7 +159,7 @@ export class ReportService extends BaseService<Report> {
           }));
           
           if (users && Array.isArray(users) && users.length > 0) {
-            console.log('[ReportService] Fetched user data from users collection:', users[0]);
+            // console.log('[ReportService] Fetched user data from users collection:', users[0]);
             userCreated = users[0];
           } else {
             console.warn(`No user found in users collection for directus_user_id: ${userCreated}`);
@@ -176,7 +176,7 @@ export class ReportService extends BaseService<Report> {
           fields: ['*'],
           filter: { report_id: { _eq: id } }
         }));
-        console.log('Fetched images for report:', id, images);
+        // console.log('Fetched images for report:', id, images);
         return { ...report, user_created: userCreated, reports_image: images || [] };
       } catch (error: any) {
         // If permission error or not found, return report without images

@@ -48,7 +48,7 @@ export class AdoptionController {
 
   createAdoption = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      console.log('Creating adoption with data:', req.body);
+      // console.log('Creating adoption with data:', req.body);
       const adoption = await this.adoptionService.create(req.body);
       sendSuccess(res, adoption, 201);
     } catch (error) {

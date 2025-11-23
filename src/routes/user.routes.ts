@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { UserController } from '../controllers/user.controller';
 import { validateSchema } from '../middleware/validate.middleware';
+import { requireAuth } from '../middleware/auth.middleware';
 import {
   createUserSchema,
   updateUserSchema,
@@ -14,8 +15,8 @@ const userController = new UserController();
 
 // User routes
 router.get('/', userController.getAllUsers);
-router.get('/me', userController.getCurrentUser);
-router.patch('/me', validateSchema(updateProfileSchema), userController.updateCurrentUser);
+router.get('/me', requireAuth, userController.getCurrentUser);
+router.patch('/me', requireAuth, validateSchema(updateProfileSchema), userController.updateCurrentUser);
 router.get('/:id', validateSchema(userIdSchema), userController.getUser);
 router.post('/', validateSchema(createUserSchema), userController.createUser);
 router.patch('/:id', validateSchema(updateUserSchema), userController.updateUser);
