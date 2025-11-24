@@ -1,4 +1,4 @@
-import { createDirectus, rest, authentication } from '@directus/sdk';
+import { createDirectus, rest, authentication, staticToken } from '@directus/sdk';
 import config from './index';
 
 // Initialize Directus Client
@@ -18,5 +18,11 @@ const directus = createDirectus(config.directus.url)
 // Settings > Roles & Permissions > Public > reports_images > Read (enable)
 const publicDirectus = createDirectus(config.directus.url).with(rest());
 
-export { directus, publicDirectus };
+// Admin client for system operations (notifications, etc.)
+// Uses static admin token for elevated permissions
+const adminDirectus = createDirectus(config.directus.url)
+  .with(rest())
+  .with(staticToken(config.directus.token || ''));
+
+export { directus, publicDirectus, adminDirectus };
 

@@ -193,8 +193,7 @@ export class AdoptionService extends BaseService<DirectusAdoption> {
         confirmation_expires_at: confirmationExpiresAt.toISOString()
       });
 
-      // Initialize subscriber and send confirmation email
-      await this.notificationService.initializeSubscriber(directusUserId);
+      // Send confirmation email and create notification
       await this.notificationService.sendAdoptionConfirmationEmail(
         adoptionId,
         directusUserId,
@@ -229,11 +228,29 @@ export class AdoptionService extends BaseService<DirectusAdoption> {
         return await this.cancelAdoption(adoptionId, true);
       }
 
+      // Get pet ID and user ID (might be object or string)
+      const petId = typeof adoption.pet_id === 'object' ? adoption.pet_id.id : adoption.pet_id;
+      const userId = typeof adoption.user_id === 'object' 
+        ? adoption.user_id.directus_user_id 
+        : null;
+
       // Update adoption status to 'confirmed'
-      return await this.update(adoptionId, {
+      const updatedAdoption = await this.update(adoptionId, {
         status: 'confirmed',
         approval_date: new Date().toISOString()
       });
+
+      // Send status update notification
+      if (userId) {
+        await this.notificationService.sendAdoptionStatusUpdate(
+          adoptionId,
+          userId,
+          petId!,
+          'confirmed'
+        );
+      }
+
+      return updatedAdoption;
     } catch (error) {
       throw this.handleError(error);
     }
@@ -250,8 +267,11 @@ export class AdoptionService extends BaseService<DirectusAdoption> {
         throw new AppError(404, 'fail', 'Adoption not found');
       }
 
-      // Get pet ID (might be object or string)
+      // Get pet ID and user ID (might be object or string)
       const petId = typeof adoption.pet_id === 'object' ? adoption.pet_id.id : adoption.pet_id;
+      const userId = typeof adoption.user_id === 'object' 
+        ? adoption.user_id.directus_user_id 
+        : null;
 
       // Update adoption status to 'cancelled'
       const updatedAdoption = await this.update(adoptionId, {
@@ -263,6 +283,20 @@ export class AdoptionService extends BaseService<DirectusAdoption> {
 
       // Update pet status back to 'available'
       await this.petService.update(petId!, { status: 'available' });
+
+      // Send status update notification
+      if (userId) {
+        const message = isExpired 
+          ? 'Your adoption request has been automatically cancelled due to confirmation timeout.'
+          : undefined;
+        await this.notificationService.sendAdoptionStatusUpdate(
+          adoptionId,
+          userId,
+          petId!,
+          'cancelled',
+          message
+        );
+      }
 
       return updatedAdoption;
     } catch (error) {
@@ -285,16 +319,31 @@ export class AdoptionService extends BaseService<DirectusAdoption> {
         throw new AppError(400, 'fail', 'Can only complete confirmed adoptions');
       }
 
-      // Get pet ID (might be object or string)
+      // Get pet ID and user ID (might be object or string)
       const petId = typeof adoption.pet_id === 'object' ? adoption.pet_id.id : adoption.pet_id;
+      const userId = typeof adoption.user_id === 'object' 
+        ? adoption.user_id.directus_user_id 
+        : null;
 
       // Update pet status to 'adopted'
       await this.petService.update(petId!, { status: 'adopted' });
 
       // Update adoption status to 'completed'
-      return await this.update(adoptionId, {
+      const updatedAdoption = await this.update(adoptionId, {
         status: 'completed'
       });
+
+      // Send status update notification
+      if (userId) {
+        await this.notificationService.sendAdoptionStatusUpdate(
+          adoptionId,
+          userId,
+          petId!,
+          'completed'
+        );
+      }
+
+      return updatedAdoption;
     } catch (error) {
       throw this.handleError(error);
     }
@@ -331,18 +380,6 @@ export class AdoptionService extends BaseService<DirectusAdoption> {
       }
 
       return { cancelled: cancelledIds.length, ids: cancelledIds };
-    } catch (error) {
-      throw this.handleError(error);
-    }
-  }
-
-  async sendAppointmentEmail(adoptionId: string, userId: string, petId: string) {
-    try {
-      // Initialize the subscriber in Novu
-      await this.notificationService.initializeSubscriber(userId);
-      
-      // Send the appointment email
-      return await this.notificationService.sendAdoptionAppointmentEmail(adoptionId, userId, petId);
     } catch (error) {
       throw this.handleError(error);
     }

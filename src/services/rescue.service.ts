@@ -2,10 +2,14 @@ import { BaseService } from './base.service';
 import { DirectusRescue } from '../types/directus';
 import { readItems, createItem, deleteItem, updateItem, readItem } from '@directus/sdk';
 import { AppError } from '../utils/errors';
+import { NotificationService } from './notification.service';
 
 export class RescueService extends BaseService<DirectusRescue> {
+  private notificationService: NotificationService;
+
   constructor() {
     super('rescues');
+    this.notificationService = new NotificationService();
   }
 
   async findAll(query?: any): Promise<{ data: any[]; total: number }> {
@@ -101,11 +105,27 @@ export class RescueService extends BaseService<DirectusRescue> {
   // Add participant to rescue
   async addParticipant(rescueId: string, userId: string, role: 'leader' | 'member' = 'member') {
     try {
-      return await this.sdk.request(createItem('rescues_users', {
+      // Get rescue details
+      const rescue = await this.findOne(rescueId);
+      if (!rescue) {
+        throw new AppError(404, 'fail', 'Rescue not found');
+      }
+
+      const participant = await this.sdk.request(createItem('rescues_users', {
         rescues_id: rescueId,
         users_id: userId,
         role,
       }));
+
+      // Send assignment notification
+      await this.notificationService.sendRescueAssignmentNotification(
+        rescueId,
+        userId,
+        rescue.location || 'Unknown location',
+        rescue.description || 'No description available'
+      );
+
+      return participant;
     } catch (error) {
       throw error;
     }
@@ -241,9 +261,29 @@ export class RescueService extends BaseService<DirectusRescue> {
       }
 
       // Update rescue status to 'in_progress'
-      return await this.update(rescueId, {
+      const updatedRescue = await this.update(rescueId, {
         status: 'in_progress'
       });
+
+      // Notify all participants
+      if (rescue.participants && rescue.participants.length > 0) {
+        for (const participant of rescue.participants) {
+          const userId = typeof participant.users_id === 'object' 
+            ? participant.users_id.id 
+            : participant.users_id;
+
+          if (userId) {
+            await this.notificationService.sendRescueStatusUpdate(
+              rescueId,
+              userId,
+              'in_progress',
+              'The rescue mission has started. Please head to the location.'
+            );
+          }
+        }
+      }
+
+      return updatedRescue;
     } catch (error) {
       throw error;
     }
@@ -265,12 +305,17 @@ export class RescueService extends BaseService<DirectusRescue> {
         throw new AppError(400, 'fail', 'Can only cancel rescues with planned or in_progress status');
       }
 
-      // Update all related reports back to 'pending' status
+      // Update all related reports back to 'pending' status and notify reporters
       if (rescue.reports && rescue.reports.length > 0) {
         for (const rescueReport of rescue.reports) {
           const reportId = typeof rescueReport.reports_id === 'object' 
             ? rescueReport.reports_id.id 
             : rescueReport.reports_id;
+          
+          const report = rescueReport.reports_id;
+          const reportCreatorId = typeof report === 'object' && report.user_created
+            ? (typeof report.user_created === 'object' ? report.user_created.id : report.user_created)
+            : null;
 
           await this.sdk.request(updateItem('reports', reportId, {
             status: 'pending'
@@ -281,16 +326,52 @@ export class RescueService extends BaseService<DirectusRescue> {
             status: 'cancelled',
             note: reason ? `Cancelled: ${reason}` : 'Rescue cancelled'
           }));
+          
+          // Notify reporter that rescue was cancelled
+          if (reportCreatorId) {
+            try {
+              await this.notificationService.sendReportStatusUpdate(
+                reportId,
+                reportCreatorId,
+                'pending',
+                reason 
+                  ? `The rescue mission for your report has been cancelled: ${reason}. Your report is back to pending status.`
+                  : 'The rescue mission for your report has been cancelled. Your report is back to pending status and may be claimed by another team.'
+              );
+            } catch (notifError) {
+              console.error('Failed to notify reporter:', notifError);
+            }
+          }
         }
       }
 
       // Update rescue status to 'cancelled'
-      return await this.update(rescueId, {
+      const updatedRescue = await this.update(rescueId, {
         status: 'cancelled',
         description: reason 
           ? `${rescue.description || ''}\n\n[Cancelled: ${reason}]`
           : rescue.description
       });
+
+      // Notify all participants
+      if (rescue.participants && rescue.participants.length > 0) {
+        for (const participant of rescue.participants) {
+          const userId = typeof participant.users_id === 'object' 
+            ? participant.users_id.id 
+            : participant.users_id;
+
+          if (userId) {
+            await this.notificationService.sendRescueStatusUpdate(
+              rescueId,
+              userId,
+              'cancelled',
+              reason || 'The rescue mission has been cancelled.'
+            );
+          }
+        }
+      }
+
+      return updatedRescue;
     } catch (error) {
       throw error;
     }
@@ -347,12 +428,17 @@ export class RescueService extends BaseService<DirectusRescue> {
         throw new AppError(400, 'fail', 'Can only complete rescues that are in progress');
       }
 
-      // Process all related reports
+      // Process all related reports and notify reporters
       if (rescue.reports && rescue.reports.length > 0) {
         for (const rescueReport of rescue.reports) {
           const reportId = typeof rescueReport.reports_id === 'object' 
             ? rescueReport.reports_id.id 
             : rescueReport.reports_id;
+          
+          const report = rescueReport.reports_id;
+          const reportCreatorId = typeof report === 'object' && report.user_created
+            ? (typeof report.user_created === 'object' ? report.user_created.id : report.user_created)
+            : null;
 
           // Update report status based on rescue-report status
           if (rescueReport.status === 'success') {
@@ -360,19 +446,67 @@ export class RescueService extends BaseService<DirectusRescue> {
             await this.sdk.request(updateItem('reports', reportId, {
               status: 'resolved'
             }));
+            
+            // Notify reporter that their report was successfully resolved
+            if (reportCreatorId) {
+              try {
+                await this.notificationService.sendReportStatusUpdate(
+                  reportId,
+                  reportCreatorId,
+                  'resolved',
+                  'Great news! The rescue mission for your report has been successfully completed. Thank you for caring about animal welfare!'
+                );
+              } catch (notifError) {
+                console.error('Failed to notify reporter:', notifError);
+              }
+            }
           } else {
             // Mark report back to pending (including cancelled or still in_progress)
             await this.sdk.request(updateItem('reports', reportId, {
               status: 'pending'
             }));
+            
+            // Notify reporter that their report is back to pending
+            if (reportCreatorId) {
+              try {
+                await this.notificationService.sendReportStatusUpdate(
+                  reportId,
+                  reportCreatorId,
+                  'pending',
+                  'The rescue mission has been completed, but your report needs further attention. It has been marked as pending again.'
+                );
+              } catch (notifError) {
+                console.error('Failed to notify reporter:', notifError);
+              }
+            }
           }
         }
       }
 
       // Update rescue status to 'completed'
-      return await this.update(rescueId, {
+      const updatedRescue = await this.update(rescueId, {
         status: 'completed'
       });
+
+      // Notify all participants
+      if (rescue.participants && rescue.participants.length > 0) {
+        for (const participant of rescue.participants) {
+          const userId = typeof participant.users_id === 'object' 
+            ? participant.users_id.id 
+            : participant.users_id;
+
+          if (userId) {
+            await this.notificationService.sendRescueStatusUpdate(
+              rescueId,
+              userId,
+              'completed',
+              'The rescue mission has been successfully completed. Thank you for your dedication!'
+            );
+          }
+        }
+      }
+
+      return updatedRescue;
     } catch (error) {
       throw error;
     }

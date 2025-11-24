@@ -1,6 +1,7 @@
 import { BaseService } from './base.service';
 import { AppError } from '../utils/errors';
 import { readItems } from '@directus/sdk';
+import { NotificationService } from './notification.service';
 
 interface Report {
   id: string;
@@ -16,6 +17,7 @@ interface Report {
   contact_email?: string;
   created_at?: Date;
   updated_at?: Date;
+  user_created?: string;
   coordinates?: {
     type: "Point";
     coordinates: [number, number]; // [longitude, latitude]
@@ -23,8 +25,11 @@ interface Report {
 }
 
 export class ReportService extends BaseService<Report> {
+  private notificationService: NotificationService;
+
   constructor() {
     super('reports');
+    this.notificationService = new NotificationService();
   }
 
   async findAll(query?: any): Promise<{ data: any[]; total: number }> {
@@ -207,9 +212,33 @@ export class ReportService extends BaseService<Report> {
     }
   }
 
-  async updateReportStatus(id: string, status: 'pending' | 'assigned' | 'resolved') {
+  async updateReportStatus(id: string, status: 'pending' | 'assigned' | 'resolved', customMessage?: string) {
     try {
-      return await this.update(id, { status });
+      // Get the report to get the user who created it
+      const report = await this.findOne(id);
+      if (!report) {
+        throw new AppError(404, 'fail', 'Report not found');
+      }
+
+      const updatedReport = await this.update(id, { status });
+
+      // Send notification to the report creator
+      if (report.user_created) {
+        const userId = typeof report.user_created === 'object' 
+          ? report.user_created.directus_user_id || report.user_created.id
+          : report.user_created;
+
+        if (userId) {
+          await this.notificationService.sendReportStatusUpdate(
+            id,
+            userId,
+            status,
+            customMessage
+          );
+        }
+      }
+
+      return updatedReport;
     } catch (error) {
       throw error;
     }
@@ -269,8 +298,12 @@ export class ReportService extends BaseService<Report> {
 
       await this.sdk.request(createItem('rescues_users', rescueUserData));
 
-      // Update the report status to 'assigned'
-      await this.updateReportStatus(reportId, 'assigned');
+      // Update the report status to 'assigned' (this will automatically send notification)
+      await this.updateReportStatus(
+        reportId, 
+        'assigned',
+        'Good news! Your report has been claimed and a rescue team is being dispatched.'
+      );
 
       // Return the created rescue with full details
       return {
