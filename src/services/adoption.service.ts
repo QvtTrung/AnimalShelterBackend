@@ -24,18 +24,45 @@ export class AdoptionService extends BaseService<DirectusAdoption> {
         ...query,
         fields: query?.fields || [
           '*',
-          { pet_id: ['*'] },  // Deep query for pet_id relationship
+          { pet_id: ['*'] },  // Deep query for pet_id (without images, we'll fetch separately)
           { user_id: ['*'] }  // Deep query for user_id relationship  
         ]
       };
 
-      // console.log('📋 AdoptionService.findAll - Query:', JSON.stringify(queryWithFields, null, 2));
-
       const result = await super.findAll(queryWithFields);
       
-      // console.log('✅ AdoptionService.findAll - First result:', JSON.stringify(result.data[0], null, 2));
+      // Manually fetch pet images for each adoption
+      const dataWithImages = await Promise.all(
+        (result.data || []).map(async (adoption: any) => {
+          try {
+            // If pet_id is an object (expanded), fetch its images
+            if (adoption.pet_id && typeof adoption.pet_id === 'object' && adoption.pet_id.id) {
+              const { readItems } = await import('@directus/sdk');
+              const images = await this.sdk.request(readItems('pet_images', {
+                fields: ['*'],
+                filter: { pet_id: { _eq: adoption.pet_id.id } },
+              }));
+              
+              return {
+                ...adoption,
+                pet_id: {
+                  ...adoption.pet_id,
+                  pet_images: images || [],
+                }
+              };
+            }
+            return adoption;
+          } catch (error) {
+            console.error(`Error fetching images for adoption ${adoption.id}:`, error);
+            return adoption;
+          }
+        })
+      );
 
-      return result;
+      return {
+        data: dataWithImages,
+        total: result.total
+      };
     } catch (error: any) {
       // Check if it's an authentication error from Directus
       if (error.message?.includes('Invalid user credentials') || 
@@ -56,16 +83,33 @@ export class AdoptionService extends BaseService<DirectusAdoption> {
       const queryWithFields = {
         fields: fields || [
           '*',
-          { pet_id: ['*'] },  // Deep query for pet_id relationship
+          { pet_id: ['*'] },  // Deep query for pet_id (without images, we'll fetch separately)
           { user_id: ['*'] }  // Deep query for user_id relationship
         ]
       };
 
-      // console.log('📋 AdoptionService.findOne - Query:', JSON.stringify(queryWithFields, null, 2));
-
       const result = await super.findOne(id, queryWithFields);
       
-      // console.log('✅ AdoptionService.findOne - Result:', JSON.stringify(result, null, 2));
+      // Manually fetch pet images if pet_id is expanded
+      if (result && result.pet_id && typeof result.pet_id === 'object' && result.pet_id.id) {
+        try {
+          const { readItems } = await import('@directus/sdk');
+          const images = await this.sdk.request(readItems('pet_images', {
+            fields: ['*'],
+            filter: { pet_id: { _eq: result.pet_id.id } },
+          }));
+          
+          return {
+            ...result,
+            pet_id: {
+              ...result.pet_id,
+              pet_images: images || [],
+            }
+          };
+        } catch (error) {
+          console.error(`Error fetching images for pet ${result.pet_id.id}:`, error);
+        }
+      }
 
       return result;
     } catch (error) {

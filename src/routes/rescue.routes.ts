@@ -8,6 +8,7 @@ const rescueController = new RescueController();
 
 // Rescue CRUD routes
 router.get('/', rescueController.getAllRescues);
+router.get('/me', rescueController.getMyRescues);
 router.get('/:id', rescueController.getRescue);
 router.post('/', validateSchema(rescueSchema), rescueController.createRescue);
 router.patch('/:id', validateSchema(rescueSchema.partial()), rescueController.updateRescue);

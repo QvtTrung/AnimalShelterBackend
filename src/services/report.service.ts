@@ -212,6 +212,25 @@ export class ReportService extends BaseService<Report> {
     }
   }
 
+  async getUserReportsByDirectusUserId(directusUserId: string) {
+    try {
+      return await this.findAll({
+        filter: {
+          user_created: { _eq: directusUserId }
+        }
+      });
+    } catch (error: any) {
+      // Check if it's an authentication error from Directus
+      if (error.message?.includes('Invalid user credentials') || 
+          error.message?.includes('permission') ||
+          error.response?.status === 401 ||
+          error.response?.status === 403) {
+        throw new AppError(401, 'fail', 'Invalid user credentials.');
+      }
+      throw error;
+    }
+  }
+
   async updateReportStatus(id: string, status: 'pending' | 'assigned' | 'resolved', customMessage?: string) {
     try {
       // Get the report to get the user who created it

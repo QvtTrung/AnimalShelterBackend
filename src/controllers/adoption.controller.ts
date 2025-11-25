@@ -86,6 +86,37 @@ export class AdoptionController {
     }
   };
 
+  getMyAdoptions = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      // Get current authenticated user ID from directus
+      const { readMe, readItems } = await import('@directus/sdk');
+      const { directus } = await import('../config/directus');
+      
+      const currentUser = await directus.request(readMe({ fields: ['id'] }));
+      
+      if (!currentUser || !currentUser.id) {
+        throw new AppError(401, 'fail', 'Authentication required');
+      }
+      
+      // Get the application user ID from directus user ID
+      const appUsers = await directus.request(readItems('users', {
+        filter: { directus_user_id: { _eq: currentUser.id } },
+        fields: ['id'],
+        limit: 1
+      }));
+      
+      if (!appUsers || appUsers.length === 0) {
+        throw new AppError(404, 'fail', 'User profile not found');
+      }
+      
+      const userId = appUsers[0].id;
+      const adoptions = await this.adoptionService.getUserAdoptions(userId);
+      sendSuccess(res, adoptions.data, 200, { total: adoptions.total });
+    } catch (error) {
+      next(error);
+    }
+  };
+
   getPetAdoptions = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const adoptions = await this.adoptionService.getPetAdoptions(req.params.petId);

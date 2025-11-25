@@ -263,6 +263,21 @@ export class RescueController {
     sendSuccess(res, rescues.data, 200, { total: rescues.total });
   });
 
+  getMyRescues = asyncHandler(async (req: Request, res: Response) => {
+    try {
+      const userId = await this.getAuthenticatedUserId();
+      const rescues = await this.rescueService.getUserRescues(userId);
+      sendSuccess(res, rescues.data, 200, { total: rescues.total });
+    } catch (error: any) {
+      if (error.message?.includes('Authentication required') || 
+          error.message?.includes('User profile not found')) {
+        sendError(res, error);
+        return;
+      }
+      throw error;
+    }
+  });
+
   // Workflow actions
   startRescue = asyncHandler(async (req: Request, res: Response) => {
     try {

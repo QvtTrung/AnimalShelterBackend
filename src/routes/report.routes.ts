@@ -19,6 +19,7 @@ const reportController = new ReportController();
 
 // Report routes
 router.get('/', reportController.getAllReports);
+router.get('/me', reportController.getMyReports);
 router.get('/pending', reportController.getPendingReports);
 router.get('/:id', validateSchema(reportIdSchema), reportController.getReport);
 router.post('/', upload.array('images', 5), validateFormData(createReportSchema), reportController.createReport);

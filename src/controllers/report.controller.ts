@@ -155,6 +155,23 @@ export class ReportController {
     sendSuccess(res, reports.data, 200, { total: reports.total });
   });
 
+  getMyReports = asyncHandler(async (req: Request, res: Response) => {
+    // Get current authenticated user ID from directus
+    const { readMe } = await import('@directus/sdk');
+    const { directus } = await import('../config/directus');
+    
+    const currentUser = await directus.request(readMe({ fields: ['id'] }));
+    
+    if (!currentUser || !currentUser.id) {
+      sendError(res, new AppError(401, 'fail', 'Authentication required'));
+      return;
+    }
+    
+    // Use directus_user_id directly for user_created field
+    const reports = await this.reportService.getUserReportsByDirectusUserId(currentUser.id);
+    sendSuccess(res, reports.data, 200, { total: reports.total });
+  });
+
   getPendingReports = asyncHandler(async (req: Request, res: Response) => {
     const result = await this.reportService.findPending(req.query);
     sendSuccess(res, result.data, 200, { total: result.total });

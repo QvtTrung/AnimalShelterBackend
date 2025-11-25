@@ -544,7 +544,6 @@ model directus_users {
   pet_images                                                              pet_images[]
   pets_pets_user_createdTodirectus_users                                  pets[]                   @relation("pets_user_createdTodirectus_users")
   pets_pets_user_updatedTodirectus_users                                  pets[]                   @relation("pets_user_updatedTodirectus_users")
-  reports_reports_reporterTodirectus_users                                reports[]                @relation("reports_reporterTodirectus_users")
   reports_reports_user_createdTodirectus_users                            reports[]                @relation("reports_user_createdTodirectus_users")
   reports_reports_user_updatedTodirectus_users                            reports[]                @relation("reports_user_updatedTodirectus_users")
   reports_image                                                           reports_image[]
@@ -645,20 +644,21 @@ model reports {
   date_updated                                        DateTime?             @db.Timestamp(0)
   species                                             String?               @db.VarChar(255)
   description                                         String?               @db.Text
-  reporter                                            String?               @db.Char(36)
   location                                            Unsupported("point")?
   title                                               String?               @db.VarChar(255)
   type                                                String?               @db.VarChar(255)
   urgency_level                                       String?               @db.VarChar(255)
+  contact_name                                        String?               @db.VarChar(255)
+  contact_phone                                       String?               @db.VarChar(255)
+  contact_email                                       String?               @db.VarChar(255)
+  coordinates                                         String?               @db.Text
   pets                                                pets?
-  directus_users_reports_reporterTodirectus_users     directus_users?       @relation("reports_reporterTodirectus_users", fields: [reporter], references: [id], onUpdate: NoAction, map: "reports_reporter_foreign")
   directus_users_reports_user_createdTodirectus_users directus_users?       @relation("reports_user_createdTodirectus_users", fields: [user_created], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "reports_user_created_foreign")
   directus_users_reports_user_updatedTodirectus_users directus_users?       @relation("reports_user_updatedTodirectus_users", fields: [user_updated], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "reports_user_updated_foreign")
   reports_image_reports_image_image_urlToreports      reports_image[]       @relation("reports_image_image_urlToreports")
   reports_image_reports_image_report_idToreports      reports_image[]       @relation("reports_image_report_idToreports")
   rescues_reports                                     rescues_reports[]
 
-  @@index([reporter], map: "reports_reporter_foreign")
   @@index([user_created], map: "reports_user_created_foreign")
   @@index([user_updated], map: "reports_user_updated_foreign")
 }

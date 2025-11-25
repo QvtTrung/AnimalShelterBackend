@@ -15,6 +15,7 @@ const adoptionController = new AdoptionController();
 
 // Adoption routes
 router.get('/', adoptionController.getAllAdoptions);
+router.get('/me', adoptionController.getMyAdoptions);
 router.get('/:id', validateSchema(adoptionIdSchema), adoptionController.getAdoption);
 router.post('/', validateSchema(createAdoptionSchema), adoptionController.createAdoption);
 router.patch('/:id', validateSchema(updateAdoptionSchema), adoptionController.updateAdoption);
