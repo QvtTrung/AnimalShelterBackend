@@ -6,6 +6,7 @@ import reportRoutes from './report.routes';
 import rescueRoutes from './rescue.routes';
 import dashboardRoutes from './dashboard.routes';
 import notificationRoutes from './notification.routes';
+import chatbotRoutes from './chatbot.routes';
 
 const router = Router();
 
@@ -16,5 +17,6 @@ router.use('/reports', reportRoutes);
 router.use('/rescues', rescueRoutes);
 router.use('/dashboard', dashboardRoutes);
 router.use('/notifications', notificationRoutes);
+router.use('/chatbot', chatbotRoutes);
 
 export default router;
