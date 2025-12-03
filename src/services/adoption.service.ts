@@ -188,6 +188,34 @@ export class AdoptionService extends BaseService<DirectusAdoption> {
         status: 'pending'
       });
 
+      // Notify admins about new adoption request (non-blocking)
+      // Get the full adoption details with pet and user info
+      const adoptionDetails = await this.findOne(adoption.id);
+      if (adoptionDetails) {
+        const petName = typeof adoptionDetails.pet_id === 'object' 
+          ? adoptionDetails.pet_id.name 
+          : 'Unknown';
+        const petSpecies = typeof adoptionDetails.pet_id === 'object' 
+          ? adoptionDetails.pet_id.species 
+          : 'Unknown';
+        const adopterName = typeof adoptionDetails.user_id === 'object'
+          ? `${adoptionDetails.user_id.first_name} ${adoptionDetails.user_id.last_name}`
+          : 'Unknown';
+        const adopterEmail = typeof adoptionDetails.user_id === 'object'
+          ? adoptionDetails.user_id.email
+          : 'Unknown';
+        
+        this.notificationService.notifyAdminsNewAdoptionRequest(
+          adoption.id,
+          petName,
+          petSpecies,
+          adopterName,
+          adopterEmail
+        ).catch(error => {
+          console.error('Failed to send new adoption notification to admins:', error);
+        });
+      }
+
       return adoption;
     } catch (error) {
       throw this.handleError(error);

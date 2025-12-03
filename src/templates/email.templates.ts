@@ -425,4 +425,89 @@ export const emailTemplates = {
     </body>
     </html>
   `,
+
+  generic: (data: {
+    title: string;
+    greeting: string;
+    message: string;
+    details?: string[];
+    actionUrl?: string;
+    actionText?: string;
+  }) => `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body>
+      <div style="font-family: Arial, sans-serif; background: #f5f7fa; padding: 24px;">
+        <table align="center" cellpadding="0" cellspacing="0" width="100%" 
+               style="max-width: 600px; background: #ffffff; border-radius: 12px; padding: 24px;">
+
+          <!-- Logo -->
+          <tr>
+            <td align="center" style="padding-bottom: 20px;">
+              <img src="https://res.cloudinary.com/drujd0cbj/image/upload/v1762537915/logo_hktthj.png"
+                   alt="App Logo"
+                   style="max-width: 90%; height: auto;" />
+            </td>
+          </tr>
+
+          <!-- Title -->
+          <tr>
+            <td align="center" style="font-size: 22px; color: #333; font-weight: bold; padding-bottom: 12px;">
+              ${data.title}
+            </td>
+          </tr>
+
+          <!-- Greeting -->
+          <tr>
+            <td style="font-size: 15px; color: #444; line-height: 1.6;">
+              ${data.greeting}
+            </td>
+          </tr>
+
+          <!-- Message -->
+          <tr>
+            <td style="font-size: 15px; color: #444; line-height: 1.6; padding-top: 14px;">
+              ${data.message}
+            </td>
+          </tr>
+
+          ${data.details && data.details.length > 0 ? `
+          <!-- Details -->
+          <tr>
+            <td style="font-size: 15px; color: #444; line-height: 1.8; padding-top: 14px; background: #f9fafb; padding: 16px; border-radius: 6px; margin-top: 14px;">
+              ${data.details.join('<br/>')}
+            </td>
+          </tr>
+          ` : ''}
+
+          ${data.actionUrl && data.actionText ? `
+          <!-- Action Button -->
+          <tr>
+            <td align="center" style="padding-top: 26px;">
+              <a href="${data.actionUrl}"
+                 style="background: #1976D2; color: #ffffff; text-decoration: none;
+                        padding: 14px 32px; font-size: 15px; border-radius: 6px; font-weight: bold; display: inline-block;">
+                ${data.actionText}
+              </a>
+            </td>
+          </tr>
+          ` : ''}
+
+          <!-- Footer -->
+          <tr>
+            <td align="center" style="font-size: 13px; color: #888; padding-top: 35px;">
+              🐾 Second Chance Sanctuary <br/><br/>
+              <strong>Making a difference, one animal at a time</strong>
+            </td>
+          </tr>
+
+        </table>
+      </div>
+    </body>
+    </html>
+  `,
 };

@@ -39,7 +39,10 @@ export class ReportService extends BaseService<Report> {
       const limit = Number(query?.limit) || Number(query?.pageSize) || 10;
       const offset = (page - 1) * limit;
 
-      const { page: _, limit: __, pageSize: ___, search, urgency_level, status, ...restQuery } = query || {};
+      const { page: _, limit: __, pageSize: ___, search, urgency_level, status, sort, ...restQuery } = query || {};
+
+      // Determine sort order (default: newest first)
+      const sortOrder = sort === 'oldest' ? ['date_created'] : ['-date_created'];
 
       // Build filter object for search and other filters
       let filter: any = {};
@@ -77,11 +80,12 @@ export class ReportService extends BaseService<Report> {
       
       const total = countResponse?.[0]?.count ?? 0;
 
-      // Get reports with filter and pagination
+      // Get reports with filter, pagination, and dynamic sort
       const items = await this.sdk.request(readItems(this.collection, {
         ...restQuery,
         limit,
         offset,
+        sort: sortOrder,
         ...(Object.keys(filter).length > 0 ? { filter } : {}),
       }));
       
@@ -323,6 +327,27 @@ export class ReportService extends BaseService<Report> {
         'assigned',
         'Good news! Your report has been claimed and a rescue team is being dispatched.'
       );
+
+      // Notify admins about report claim (non-blocking)
+      // Get user details for notification
+      const user = await this.sdk.request(readItems('users', {
+        filter: { id: { _eq: userId } },
+        fields: ['first_name', 'last_name'],
+        limit: 1
+      }));
+      
+      if (user && user.length > 0) {
+        const userName = `${user[0].first_name} ${user[0].last_name}`;
+        this.notificationService.notifyAdminsReportClaimed(
+          rescue.id,
+          reportId,
+          userName,
+          report.location || 'Unknown location',
+          report.type || 'General'
+        ).catch(error => {
+          console.error('Failed to send report claim notification to admins:', error);
+        });
+      }
 
       // Return the created rescue with full details
       return {

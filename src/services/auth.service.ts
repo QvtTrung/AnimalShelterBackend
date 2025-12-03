@@ -6,8 +6,14 @@ import { readMe, registerUser, readUsers, readItems, createItem, deleteItem, ref
 import { DirectusUser, AppUser, AppUserOrNull, RegisterPayload, UsersQuery } from '../types/directus';
 import { extractDirectusData } from '../utils/validation';
 import config from '../config/index';
+import { NotificationService } from './notification.service';
 
 export class AuthService {
+  private notificationService: NotificationService;
+
+  constructor() {
+    this.notificationService = new NotificationService();
+  }
   async login(email: string, password: string) {
     try {
       const result = await directus.login( {email, password} );
@@ -182,6 +188,15 @@ export class AuthService {
     // Login after successful registration to get the token
     const loginResult = await directus.login({ email, password });
     directus.setToken('');
+    
+    // Notify admins about new user registration (non-blocking)
+    this.notificationService.notifyAdminsNewUserRegistered(
+      createdAppUser.id,
+      `${first_name} ${last_name}`,
+      email
+    ).catch(error => {
+      console.error('Failed to send new user notification to admins:', error);
+    });
     
     return { 
       directusUser, 
