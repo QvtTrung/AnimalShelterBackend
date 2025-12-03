@@ -289,13 +289,13 @@ export class DashboardService extends BaseService<any> {
       const petsCount = await this.getPetsCount();
 
       // Get recent activities
-      const recentReports = await this.getRecentReports(5);
-      const recentRescues = await this.getRecentRescues(5);
-      const recentAdoptions = await this.getRecentAdoptions(5);
+      const recentReports = await this.getRecentReports(10);
+      const recentRescues = await this.getRecentRescues(10);
+      const recentAdoptions = await this.getRecentAdoptions(10);
 
-      // Get map data (pending reports and in-progress rescues)
+      // Get map data (pending reports and all rescues with their reports)
       const pendingReports = await this.getPendingReports();
-      const inProgressRescues = await this.getInProgressRescues();
+      const allRescues = await this.getAllRescues();
 
       return {
         stats: {
@@ -311,7 +311,7 @@ export class DashboardService extends BaseService<any> {
         },
         map: {
           pendingReports,
-          inProgressRescues,
+          allRescues,
         },
       };
     } catch (error) {
@@ -569,6 +569,66 @@ export class DashboardService extends BaseService<any> {
       return rescuesWithReports;
     } catch (error) {
       console.error('Error getting in-progress rescues:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get all rescues with their associated reports and coordinates
+   */
+  private async getAllRescues() {
+    try {
+      const rescues = await this.sdk.request(
+        readItems('rescues', {
+          fields: ['id', 'title', 'description', 'status', 'date_created'],
+          sort: ['-date_created'],
+        })
+      );
+
+      // For each rescue, get associated reports with coordinates
+      const rescuesWithReports = await Promise.all(
+        (rescues || []).map(async (rescue: any) => {
+          const rescueReports = await this.sdk.request(
+            readItems('rescues_reports', {
+              filter: {
+                rescues_id: {
+                  _eq: rescue.id,
+                },
+              },
+              fields: ['reports_id'],
+            })
+          );
+
+          const reportIds = rescueReports?.map((rr: any) => rr.reports_id) || [];
+
+          if (reportIds.length > 0) {
+            const reports = await this.sdk.request(
+              readItems('reports', {
+                filter: {
+                  id: {
+                    _in: reportIds,
+                  },
+                },
+                fields: ['id', 'title', 'location', 'coordinates'],
+              })
+            );
+
+            return {
+              ...rescue,
+              reports: reports || [],
+            };
+          }
+
+          return {
+            ...rescue,
+            reports: [],
+          };
+        })
+      );
+
+      return rescuesWithReports;
+    } catch (error) {
+      console.error('Error getting all rescues:', error);
       return [];
     }
   }

@@ -7,6 +7,14 @@ import { directus } from '../config/directus';
  */
 export function authMiddleware(req: Request, _res: Response, next: NextFunction) {
   try {
+    // Skip token setting for refresh endpoint - it uses refresh_token in body
+    if (req.path === '/auth/refresh' || req.path.endsWith('/auth/refresh')) {
+      // Clear any existing token to avoid using expired tokens
+      directus.setToken(null);
+      next();
+      return;
+    }
+    
     const authHeader = req.headers.authorization;
     
     if (authHeader && authHeader.startsWith('Bearer ')) {

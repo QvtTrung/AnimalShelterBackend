@@ -28,6 +28,12 @@ router.get('/unread-count', notificationController.getUnreadCount);
 router.put('/mark-all-read', notificationController.markAllAsRead);
 
 /**
+ * @route   GET /api/notifications/:id
+ * @desc    Get a specific notification by ID
+ */
+router.get('/:id', notificationController.getNotificationById);
+
+/**
  * @route   PUT /api/notifications/:id/read
  * @desc    Mark a specific notification as read
  */

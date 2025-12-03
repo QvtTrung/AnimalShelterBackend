@@ -43,7 +43,7 @@ export class UserService extends BaseService<AppUser> {
       existingUser = extractDirectusData(res);
     } catch (err: any) {
       console.error('Error checking email existence:', err);
-      throw new Error('Failed to check email existence');
+      throw new Error('Không thể kiểm tra sự tồn tại của email');
     }
 
     if (existingUser) {
@@ -73,7 +73,7 @@ export class UserService extends BaseService<AppUser> {
         role: roleId
       }));
     } catch (err: any) {
-      throw new Error(err?.message || 'Could not create directus user');
+      throw new Error(err?.message || 'Không thể tạo tài khoản Directus');
     }
 
     // Fetch the created Directus user by email
@@ -86,11 +86,11 @@ export class UserService extends BaseService<AppUser> {
       const res = await directus.request(readUsers(query));
       directusUser = extractDirectusData(res);
     } catch (err: any) {
-      throw new Error(err?.message || 'Failed to fetch created directus user');
+      throw new Error(err?.message || 'Không thể lấy thông tin người dùng vừa tạo');
     }
 
     if (!directusUser || !directusUser.id) {
-      throw new Error('Could not determine created directus user id');
+      throw new Error('Không thể xác định ID người dùng');
     }
 
     const directusUserId = directusUser.id;
@@ -120,7 +120,7 @@ export class UserService extends BaseService<AppUser> {
         console.error('Failed to rollback Directus user:', rollbackErr);
       }
 
-      throw new Error(err?.message || 'Could not create application user');
+      throw new Error(err?.message || 'Không thể tạo hồ sơ người dùng');
     }
 
     return createdAppUser;
@@ -286,7 +286,7 @@ export class UserService extends BaseService<AppUser> {
         try {
           await directus.request(updateUser(appUser.directus_user_id, { password }));
         } catch (err: any) {
-          throw new Error(err?.message || 'Failed to update Directus user password');
+          throw new Error(err?.message || 'Không thể cập nhật mật khẩu người dùng Directus');
         }
       }
       

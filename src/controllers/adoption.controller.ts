@@ -71,7 +71,7 @@ export class AdoptionController {
   deleteAdoption = async (req: Request, res: Response, next: NextFunction) => {
     try {
       await this.adoptionService.delete(req.params.id);
-      sendSuccess(res, { message: 'Adoption deleted successfully' }, 200);
+      sendSuccess(res, { message: 'Xóa đơn xin nhận nuôi thành công' }, 200);
     } catch (error) {
       next(error);
     }
@@ -95,7 +95,7 @@ export class AdoptionController {
       const currentUser = await directus.request(readMe({ fields: ['id'] }));
       
       if (!currentUser || !currentUser.id) {
-        throw new AppError(401, 'fail', 'Authentication required');
+        throw new AppError(401, 'fail', 'Yêu cầu đăng nhập');
       }
       
       // Get the application user ID from directus user ID
@@ -106,7 +106,7 @@ export class AdoptionController {
       }));
       
       if (!appUsers || appUsers.length === 0) {
-        throw new AppError(404, 'fail', 'User profile not found');
+        throw new AppError(404, 'fail', 'Không tìm thấy hồ sơ người dùng');
       }
       
       const userId = appUsers[0].id;
@@ -130,7 +130,7 @@ export class AdoptionController {
     try {
       const { status } = req.body;
       if (!status) {
-        throw new AppError(400, 'fail', 'Status is required');
+        throw new AppError(400, 'fail', 'Trạng thái là bắt buộc');
       }
       const adoption = await this.adoptionService.updateAdoptionStatus(req.params.id, status);
       sendSuccess(res, adoption, 200);

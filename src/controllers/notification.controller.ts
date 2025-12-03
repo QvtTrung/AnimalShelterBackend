@@ -21,12 +21,17 @@ export class NotificationController {
    */
   private async getCurrentUserId(): Promise<string> {
     try {
+      // Use the directus client which has the user's token set by auth middleware
       const directusUser = await directus.request(readMe({ fields: ['id'] }));
       if (!directusUser || !directusUser.id) {
-        throw new AppError(401, 'fail', 'User not authenticated');
+        throw new AppError(401, 'fail', 'Người dùng chưa đăng nhập');
       }
       return directusUser.id;
-    } catch (error) {
+    } catch (error: any) {
+      // Check if token expired
+      if (error?.message?.includes('expired') || error?.message?.includes('Token expired')) {
+        throw new AppError(401, 'fail', 'Token expired. Please refresh your session.');
+      }
       throw new AppError(401, 'fail', 'User not authenticated');
     }
   }
@@ -68,7 +73,7 @@ export class NotificationController {
 
     res.status(200).json({
       status: 'success',
-      message: `${result.updated} notifications marked as read`,
+      message: `${result.updated} thông báo đã được đánh dấu là đã đọc`,
       data: result,
     });
   });
@@ -85,6 +90,20 @@ export class NotificationController {
       data: {
         count: result.total,
       },
+    });
+  });
+
+  /**
+   * Get a single notification by ID
+   */
+  getNotificationById = asyncHandler(async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const userId = await this.getCurrentUserId();
+    const result = await this.notificationService.getNotificationById(id, userId);
+
+    res.status(200).json({
+      status: 'success',
+      data: result,
     });
   });
 }

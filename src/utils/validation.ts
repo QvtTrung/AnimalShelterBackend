@@ -78,7 +78,7 @@ export const fileUploadSchema = z.object({
 export function validateFileUpload(file: Express.Multer.File | undefined, files: Express.Multer.File[] | Record<string, Express.Multer.File[]> | undefined): void {
   // For single file upload
   if (!file && (!files || (Array.isArray(files) && files.length === 0))) {
-    throw new AppError(400, 'fail', 'No files uploaded');
+    throw new AppError(400, 'fail', 'Không có tệp tin nào được tải lên');
   }
 
   const allFiles = file ? [file] : 
@@ -90,13 +90,13 @@ export function validateFileUpload(file: Express.Multer.File | undefined, files:
 
     // Check file size (5MB limit)
     if (file.size > 5 * 1024 * 1024) {
-      throw new AppError(400, 'fail', `File ${file.originalname} is too large. Maximum size is 5MB`);
+      throw new AppError(400, 'fail', `Tệp ${file.originalname} quá lớn. Kích thước tối đa là 5MB`);
     }
 
     // Check file type
     const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
     if (!allowedTypes.includes(file.mimetype)) {
-      throw new AppError(400, 'fail', `File ${file.originalname} has invalid type. Allowed types: JPG, PNG, GIF`);
+      throw new AppError(400, 'fail', `Tệp ${file.originalname} có định dạng không hợp lệ. Chỉ chấp nhận: JPG, PNG, GIF`);
     }
   }
 }

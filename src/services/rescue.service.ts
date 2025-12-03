@@ -160,17 +160,17 @@ export class RescueService extends BaseService<DirectusRescue> {
       }
 
       if (rescue.status !== 'planned') {
-        throw new AppError(400, 'fail', 'Can only add reports to planned rescues');
+        throw new AppError(400, 'fail', 'Chỉ có thể thêm báo cáo vào chiến dịch đã lập kế hoạch');
       }
 
       // Validate report exists and has 'pending' status
       const report = await this.sdk.request(readItem('reports', reportId));
       if (!report) {
-        throw new AppError(404, 'fail', 'Report not found');
+        throw new AppError(404, 'fail', 'Không tìm thấy báo cáo');
       }
 
       if (report.status !== 'pending') {
-        throw new AppError(400, 'fail', 'Can only add reports with pending status to a rescue');
+        throw new AppError(400, 'fail', 'Chỉ có thể thêm báo cáo đang chờ xử lý vào chiến dịch cứu hộ');
       }
 
       // Create the rescue-report relationship
@@ -229,7 +229,7 @@ export class RescueService extends BaseService<DirectusRescue> {
           error.message?.includes('permission') ||
           error.response?.status === 401 ||
           error.response?.status === 403) {
-        throw new AppError(401, 'fail', 'Invalid user credentials.');
+        throw new AppError(401, 'fail', 'Thông tin đăng nhập không hợp lệ.');
       }
       throw this.handleError(error);
     }
@@ -302,7 +302,7 @@ export class RescueService extends BaseService<DirectusRescue> {
       }
 
       if (rescue.status !== 'planned' && rescue.status !== 'in_progress') {
-        throw new AppError(400, 'fail', 'Can only cancel rescues with planned or in_progress status');
+        throw new AppError(400, 'fail', 'Chỉ có thể hủy chiến dịch ở trạng thái đã lập kế hoạch hoặc đang tiến hành');
       }
 
       // Update all related reports back to 'pending' status and notify reporters
@@ -389,7 +389,7 @@ export class RescueService extends BaseService<DirectusRescue> {
       }));
 
       if (!rescueReport) {
-        throw new AppError(404, 'fail', 'Rescue report not found');
+        throw new AppError(404, 'fail', 'Không tìm thấy báo cáo cứu hộ');
       }
 
       // Validate rescue is in_progress
@@ -398,7 +398,7 @@ export class RescueService extends BaseService<DirectusRescue> {
         : await this.findOne(rescueReport.rescues_id);
 
       if (rescue.status !== 'in_progress') {
-        throw new AppError(400, 'fail', 'Can only update report progress for rescues in progress');
+        throw new AppError(400, 'fail', 'Chỉ có thể cập nhật tiến độ báo cáo cho chiến dịch đang tiến hành');
       }
 
       // Update the rescue-report status
@@ -425,7 +425,7 @@ export class RescueService extends BaseService<DirectusRescue> {
       }
 
       if (rescue.status !== 'in_progress') {
-        throw new AppError(400, 'fail', 'Can only complete rescues that are in progress');
+        throw new AppError(400, 'fail', 'Chỉ có thể hoàn tất chiến dịch đang tiến hành');
       }
 
       // Process all related reports and notify reporters

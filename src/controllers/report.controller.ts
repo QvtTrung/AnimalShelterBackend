@@ -147,7 +147,7 @@ export class ReportController {
     }
 
     await this.reportService.delete(req.params.id);
-    sendSuccess(res, { message: 'Report deleted successfully' }, 200);
+    sendSuccess(res, { message: 'Xóa báo cáo thành công' }, 200);
   });
 
   getUserReports = asyncHandler(async (req: Request, res: Response) => {
@@ -163,7 +163,7 @@ export class ReportController {
     const currentUser = await directus.request(readMe({ fields: ['id'] }));
     
     if (!currentUser || !currentUser.id) {
-      sendError(res, new AppError(401, 'fail', 'Authentication required'));
+        sendError(res, new AppError(401, 'fail', 'Yêu cầu đăng nhập'));
       return;
     }
     
@@ -180,7 +180,7 @@ export class ReportController {
   updateReportStatus = asyncHandler(async (req: Request, res: Response) => {
     const { status } = req.body;
     if (!status) {
-      sendError(res, new AppError(400, 'fail', 'Status is required'));
+      sendError(res, new AppError(400, 'fail', 'Trạng thái là bắt buộc'));
       return;
     }
     const report = await this.reportService.updateReportStatus(req.params.id, status);
@@ -244,7 +244,7 @@ export class ReportController {
       }));
       
       if (!appUsers || appUsers.length === 0) {
-        sendError(res, new AppError(404, 'fail', 'User profile not found'));
+        sendError(res, new AppError(404, 'fail', 'Không tìm thấy hồ sơ người dùng'));
         return;
       }
       
@@ -259,7 +259,7 @@ export class ReportController {
 
       // Check if report is claimable (must be pending status)
       if (report.status !== 'pending') {
-        sendError(res, new AppError(400, 'fail', 'Report is not available for claiming'));
+        sendError(res, new AppError(400, 'fail', 'Báo cáo không khả dụng để nhận'));
         return;
       }
 

@@ -43,7 +43,7 @@ export class AuthService {
         refresh_token: result.refresh_token // Include refresh token for flexibility
       };
     } catch (error) {
-      throw new UnauthorizedError(error?.message || 'Invalid email or password');
+      throw new UnauthorizedError(error?.message || 'Email hoặc mật khẩu không đúng');
     }
   }
 
@@ -80,7 +80,7 @@ export class AuthService {
         user: appUser
       };
     } catch (error) {
-      throw new UnauthorizedError('Not authenticated');
+      throw new UnauthorizedError('Chưa đăng nhập');
     }
   }
 
@@ -107,7 +107,7 @@ export class AuthService {
       // console.log('Extracted existing user:', existingUser);
     } catch (err: any) {
       console.error('Error checking email existence:', err);
-      throw new UnauthorizedError('Failed to check email existence');
+      throw new UnauthorizedError('Không thể kiểm tra email');
     }
     
     if (existingUser) {
@@ -127,7 +127,7 @@ export class AuthService {
         {first_name, 
           last_name}));
     } catch (err: any) {
-      throw new UnauthorizedError(err?.message || 'Could not create directus user');
+      throw new UnauthorizedError(err?.message || 'Không thể tạo tài khoản');
     }
 
     // 2) Fetch the created Directus user by email to obtain its id using readUsers helper
@@ -142,11 +142,11 @@ export class AuthService {
       // Use helper function to extract data safely
       directusUser = extractDirectusData<DirectusUser>(res);
     } catch (err: any) {
-      throw new UnauthorizedError(err?.message || 'Registered but failed to fetch created directus user');
+      throw new UnauthorizedError(err?.message || 'Đăng ký thành công nhưng không thể lấy thông tin người dùng');
     }
 
     if (!directusUser || !directusUser.id) {
-      throw new UnauthorizedError('Could not determine created directus user id');
+      throw new UnauthorizedError('Không thể xác định ID người dùng');
     }
 
     const directusUserId = directusUser.id;
@@ -176,7 +176,7 @@ export class AuthService {
       } catch (rollbackErr) {
       }
 
-      throw new UnauthorizedError(err?.message || 'Could not create application user');
+      throw new UnauthorizedError(err?.message || 'Không thể tạo hồ sơ người dùng');
     }
 
     // Login after successful registration to get the token
@@ -211,7 +211,7 @@ export class AuthService {
         const result = await directus.request(refresh({ mode: 'json', refresh_token: refreshToken }));
         
         if (!result || !result.access_token) {
-          throw new UnauthorizedError('Failed to obtain new access token');
+          throw new UnauthorizedError('Không thể lấy token truy cập mới');
         }
         
         tokens = result;
@@ -224,7 +224,7 @@ export class AuthService {
       }
       
       if (!tokens || !tokens.access_token) {
-        throw new UnauthorizedError('Failed to obtain new access token');
+        throw new UnauthorizedError('Không thể lấy token truy cập mới');
       }
 
       // Get the current user to verify they are still authenticated
@@ -259,7 +259,13 @@ export class AuthService {
       };
     } catch (error: any) {
       console.error('Refresh token error:', error);
-      throw new UnauthorizedError('Failed to refresh token. Please login again.');
+      
+      // Check if this is a token expiration error
+      if (error?.message?.includes('Token expired') || error?.message?.includes('expired')) {
+        throw new UnauthorizedError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+      }
+      
+      throw new UnauthorizedError('Không thể làm mới token. Vui lòng đăng nhập lại.');
     }
   }
 }

@@ -28,13 +28,13 @@ export const processChatMessage = asyncHandler(async (req: Request, res: Respons
   const { message, conversationHistory = [], image }: ChatRequest = req.body;
 
   if (!message || typeof message !== 'string' || message.trim().length === 0) {
-    sendError(res, new AppError(400, 'fail', 'Message is required and must be a non-empty string'));
+    sendError(res, new AppError(400, 'fail', 'Tin nhắn là bắt buộc và không được để trống'));
     return;
   }
 
   // Validate conversation history if provided
   if (conversationHistory && !Array.isArray(conversationHistory)) {
-    sendError(res, new AppError(400, 'fail', 'Conversation history must be an array'));
+    sendError(res, new AppError(400, 'fail', 'Lịch sử trò chuyện phải là một mảng'));
     return;
   }
 
@@ -47,7 +47,7 @@ export const processChatMessage = asyncHandler(async (req: Request, res: Respons
     });
   } catch (error) {
     logger.error('Error processing chat message:', error);
-    sendError(res, new AppError(500, 'error', 'Failed to process message. Please try again.'), 500);
+    sendError(res, new AppError(500, 'error', 'Không thể xử lý tin nhắn. Vui lòng thử lại.'), 500);
   }
 });
 
@@ -69,14 +69,14 @@ export const analyzeImage = asyncHandler(async (req: Request, res: Response) => 
   const { image, message = 'What can you tell me about this animal?' }: { image: { mimeType: string; data: string }; message?: string } = req.body;
 
   if (!image || !image.mimeType || !image.data) {
-    sendError(res, new AppError(400, 'fail', 'Image data is required with mimeType and base64 data'));
+    sendError(res, new AppError(400, 'fail', 'Dữ liệu hình ảnh là bắt buộc với mimeType và dữ liệu base64'));
     return;
   }
 
   // Validate mime type
   const validMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
   if (!validMimeTypes.includes(image.mimeType)) {
-    sendError(res, new AppError(400, 'fail', 'Invalid image format. Supported formats: JPEG, PNG, WebP'));
+    sendError(res, new AppError(400, 'fail', 'Định dạng hình ảnh không hợp lệ. Các định dạng được hỗ trợ: JPEG, PNG, WebP'));
     return;
   }
 
@@ -89,6 +89,6 @@ export const analyzeImage = asyncHandler(async (req: Request, res: Response) => 
     });
   } catch (error) {
     logger.error('Error analyzing image:', error);
-    sendError(res, new AppError(500, 'error', 'Failed to analyze image. Please try again.'), 500);
+    sendError(res, new AppError(500, 'error', 'Không thể phân tích hình ảnh. Vui lòng thử lại.'), 500);
   }
 });

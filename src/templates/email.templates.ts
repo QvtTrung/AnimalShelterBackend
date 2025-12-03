@@ -31,23 +31,23 @@ export const emailTemplates = {
           <!-- Title -->
           <tr>
             <td align="center" style="font-size: 22px; color: #333; font-weight: bold; padding-bottom: 12px;">
-              Adoption Confirmation Required
+              Yêu cầu xác nhận nhận nuôi
             </td>
           </tr>
 
           <!-- Greeting -->
           <tr>
             <td style="font-size: 15px; color: #444; line-height: 1.6;">
-              Dear <strong>${data.firstName} ${data.lastName}</strong>,
+              Kính gửi <strong>${data.firstName} ${data.lastName}</strong>,
             </td>
           </tr>
 
           <!-- Message -->
           <tr>
             <td style="font-size: 15px; color: #444; line-height: 1.6; padding-top: 14px;">
-              Thank you for your interest in adopting 
-              <strong>${data.petName}</strong> (${data.petSpecies})! 
-              To proceed, please confirm your adoption request within the next 
+              Cảm ơn bạn đã quan tâm đến việc nhận nuôi
+              <strong>${data.petName}</strong> (${data.petSpecies})!
+              Để tiếp tục, vui lòng xác nhận yêu cầu nhận nuôi của bạn trong vòng
               <strong>${data.expiresIn}</strong>.
             </td>
           </tr>
@@ -58,7 +58,7 @@ export const emailTemplates = {
               <a href="${data.confirmUrl}"
                  style="background: #4CAF50; color: #ffffff; text-decoration: none;
                         padding: 14px 32px; font-size: 15px; border-radius: 6px; font-weight: bold; display: inline-block;">
-                Confirm Adoption
+                Xác nhận nhận nuôi
               </a>
             </td>
           </tr>
@@ -66,7 +66,7 @@ export const emailTemplates = {
           <!-- Cancel Text -->
           <tr>
             <td style="font-size: 15px; color: #444; line-height: 1.6; padding-top: 24px;">
-              If you've changed your mind, you can cancel your request instead:
+              Nếu bạn đã thay đổi ý định, bạn có thể hủy yêu cầu của mình:
             </td>
           </tr>
 
@@ -76,7 +76,7 @@ export const emailTemplates = {
               <a href="${data.cancelUrl}"
                  style="background: #f44336; color: #ffffff; text-decoration: none;
                         padding: 14px 32px; font-size: 15px; border-radius: 6px; font-weight: bold; display: inline-block;">
-                Cancel Request
+                Hủy yêu cầu
               </a>
             </td>
           </tr>
@@ -84,15 +84,15 @@ export const emailTemplates = {
           <!-- Safely Ignore -->
           <tr>
             <td style="font-size: 14px; color: #555; line-height: 1.5; padding-top: 28px;">
-              If you did not make this request, please ignore this email.
+              Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email này.
             </td>
           </tr>
 
           <!-- Footer -->
           <tr>
             <td align="center" style="font-size: 13px; color: #888; padding-top: 35px;">
-              🐾 Thank you for giving a pet a second chance. <br/><br/>
-              <strong>Second Chance Sanctuary Team</strong>
+              🐾 Cảm ơn bạn đã cho thú cưng một cơ hội thứ hai. <br/><br/>
+              <strong>Đội ngũ Second Chance Sanctuary</strong>
             </td>
           </tr>
 
@@ -133,21 +133,21 @@ export const emailTemplates = {
           <!-- Title -->
           <tr>
             <td align="center" style="font-size: 22px; color: #333; font-weight: bold; padding-bottom: 12px;">
-              Adoption Status Update
+              Cập nhật trạng thái nhận nuôi
             </td>
           </tr>
 
           <!-- Greeting -->
           <tr>
             <td style="font-size: 15px; color: #444; line-height: 1.6;">
-              Dear <strong>${data.firstName} ${data.lastName}</strong>,
+              Kính gửi <strong>${data.firstName} ${data.lastName}</strong>,
             </td>
           </tr>
 
           <!-- Message -->
           <tr>
             <td style="font-size: 15px; color: #444; line-height: 1.6; padding-top: 14px;">
-              Your adoption request for <strong>${data.petName}</strong> has been updated to: 
+              Yêu cầu nhận nuôi của bạn cho <strong>${data.petName}</strong> đã được cập nhật thành:
               <strong style="color: #2196F3;">${data.status.toUpperCase()}</strong>
             </td>
           </tr>
@@ -164,7 +164,7 @@ export const emailTemplates = {
               <a href="${data.detailsUrl}"
                  style="background: #2196F3; color: #ffffff; text-decoration: none;
                         padding: 14px 32px; font-size: 15px; border-radius: 6px; font-weight: bold; display: inline-block;">
-                View Details
+                Xem chi tiết
               </a>
             </td>
           </tr>
@@ -172,8 +172,8 @@ export const emailTemplates = {
           <!-- Footer -->
           <tr>
             <td align="center" style="font-size: 13px; color: #888; padding-top: 35px;">
-              🐾 Thank you for giving a pet a second chance. <br/><br/>
-              <strong>Second Chance Sanctuary Team</strong>
+              🐾 Cảm ơn bạn đã cho thú cưng một cơ hội thứ hai. <br/><br/>
+              <strong>Đội ngũ Second Chance Sanctuary</strong>
             </td>
           </tr>
 
@@ -214,21 +214,21 @@ export const emailTemplates = {
           <!-- Title -->
           <tr>
             <td align="center" style="font-size: 22px; color: #333; font-weight: bold; padding-bottom: 12px;">
-              Rescue Mission Update
+              Cập nhật nhiệm vụ cứu hộ
             </td>
           </tr>
 
           <!-- Greeting -->
           <tr>
             <td style="font-size: 15px; color: #444; line-height: 1.6;">
-              Dear <strong>${data.firstName} ${data.lastName}</strong>,
+              Kính gửi <strong>${data.firstName} ${data.lastName}</strong>,
             </td>
           </tr>
 
           <!-- Message -->
           <tr>
             <td style="font-size: 15px; color: #444; line-height: 1.6; padding-top: 14px;">
-              Your rescue mission <strong>#${data.rescueId}</strong> has been updated to: 
+              Nhiệm vụ cứu hộ <strong>#${data.rescueId}</strong> của bạn đã được cập nhật thành:
               <strong style="color: #FF9800;">${data.status.toUpperCase()}</strong>
             </td>
           </tr>
@@ -245,7 +245,7 @@ export const emailTemplates = {
               <a href="${data.detailsUrl}"
                  style="background: #FF9800; color: #ffffff; text-decoration: none;
                         padding: 14px 32px; font-size: 15px; border-radius: 6px; font-weight: bold; display: inline-block;">
-                View Rescue Details
+                Xem chi tiết cứu hộ
               </a>
             </td>
           </tr>

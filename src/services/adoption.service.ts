@@ -157,11 +157,11 @@ export class AdoptionService extends BaseService<DirectusAdoption> {
       // Check if pet is available
       const pet = await this.petService.findOne(data.pet_id!);
       if (!pet) {
-        throw new AppError(404, 'fail', 'Pet not found');
+        throw new AppError(404, 'fail', 'Không tìm thấy thú cưng');
       }
 
       if (pet.status !== 'available') {
-        throw new AppError(400, 'fail', 'Pet is not available for adoption');
+        throw new AppError(400, 'fail', 'Thú cưng này không còn sẵn để nhận nuôi');
       }
 
       // Check for existing pending/confirming/confirmed adoptions for this pet
@@ -179,7 +179,7 @@ export class AdoptionService extends BaseService<DirectusAdoption> {
       });
 
       if (existingAdoptions && existingAdoptions.data && existingAdoptions.data.length > 0) {
-        throw new AppError(409, 'fail', 'There is already a pending adoption for this pet');
+        throw new AppError(409, 'fail', 'Đã có đơn xin nhận nuôi đang chờ duyệt cho thú cưng này');
       }
 
       // Create the adoption with default status 'pending'
@@ -208,7 +208,7 @@ export class AdoptionService extends BaseService<DirectusAdoption> {
 
       // Validate current status
       if (adoption.status !== 'pending') {
-        throw new AppError(400, 'fail', 'Can only send confirmation for pending adoptions');
+        throw new AppError(400, 'fail', 'Chỉ có thể gửi xác nhận cho đơn đang chờ duyệt');
       }
 
       // Get pet and user IDs (they might be objects or strings)
@@ -220,7 +220,7 @@ export class AdoptionService extends BaseService<DirectusAdoption> {
         : null;
       
       if (!directusUserId) {
-        throw new AppError(400, 'fail', 'User does not have a linked Directus account');
+        throw new AppError(400, 'fail', 'Người dùng chưa liên kết tài khoản Directus');
       }
 
       // Update pet status to 'pending'
@@ -258,11 +258,11 @@ export class AdoptionService extends BaseService<DirectusAdoption> {
     try {
       const adoption = await this.findOne(adoptionId);
       if (!adoption) {
-        throw new AppError(404, 'fail', 'Adoption not found');
+        throw new AppError(404, 'fail', 'Không tìm thấy đơn xin nhận nuôi');
       }
 
       if (adoption.status !== 'confirming') {
-        throw new AppError(400, 'fail', 'Can only confirm adoptions in confirming status');
+        throw new AppError(400, 'fail', 'Chỉ có thể xác nhận các đơn đang trong trạng thái xác nhận');
       }
 
       // Check if confirmation has expired
@@ -356,11 +356,11 @@ export class AdoptionService extends BaseService<DirectusAdoption> {
     try {
       const adoption = await this.findOne(adoptionId);
       if (!adoption) {
-        throw new AppError(404, 'fail', 'Adoption not found');
+        throw new AppError(404, 'fail', 'Không tìm thấy đơn xin nhận nuôi');
       }
 
       if (adoption.status !== 'confirmed') {
-        throw new AppError(400, 'fail', 'Can only complete confirmed adoptions');
+        throw new AppError(400, 'fail', 'Chỉ có thể hoàn tất các đơn đã được xác nhận');
       }
 
       // Get pet ID and user ID (might be object or string)

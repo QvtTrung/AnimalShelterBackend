@@ -153,7 +153,7 @@ export class DashboardController {
         return sendError(res, { 
           status: 400, 
           statusCode: 'fail', 
-          message: 'User coordinates not available. Please provide location or update your profile.' 
+          message: 'Không có tọa độ người dùng. Vui lòng cung cấp vị trí hoặc cập nhật hồ sơ của bạn.' 
         });
       }
 

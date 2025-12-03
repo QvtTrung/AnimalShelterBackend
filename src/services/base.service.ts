@@ -20,7 +20,7 @@ export class BaseService<T> {
     if (error.message) {
       throw new Error(error.message);
     }
-    throw new Error('An unexpected error occurred');
+    throw new Error('Đã xảy ra lỗi không mong muốn');
   }
 
   async findAll(query?: any): Promise<{ data: any[]; total: number }> {

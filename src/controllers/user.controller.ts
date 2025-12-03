@@ -53,7 +53,7 @@ export class UserController {
 
   deleteUser = asyncHandler(async (req: Request, res: Response) => {
     await this.userService.delete(req.params.id);
-    sendSuccess(res, { message: 'User deleted successfully' }, 200);
+    sendSuccess(res, { message: 'Xóa người dùng thành công' }, 200);
   });
 
   getUserByEmail = asyncHandler(async (req: Request, res: Response) => {

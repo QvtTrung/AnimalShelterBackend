@@ -32,7 +32,7 @@ export class RescueController {
     }));
     
     if (!currentUser || !currentUser.id) {
-      throw new AppError(401, 'fail', 'Authentication required');
+      throw new AppError(401, 'fail', 'Yêu cầu đăng nhập');
     }
     
     // Get the application user ID from the directus user ID
@@ -43,7 +43,7 @@ export class RescueController {
     }));
     
     if (!appUsers || appUsers.length === 0) {
-      throw new AppError(404, 'fail', 'User profile not found');
+      throw new AppError(404, 'fail', 'Không tìm thấy hồ sơ người dùng');
     }
     
     return appUsers[0].id;
@@ -139,7 +139,7 @@ export class RescueController {
 
   deleteRescue = asyncHandler(async (req: Request, res: Response) => {
     await this.rescueService.delete(req.params.id);
-    sendSuccess(res, { message: 'Rescue deleted successfully' }, 200);
+    sendSuccess(res, { message: 'Xóa chiến dịch cứu hộ thành công' }, 200);
   });
 
   // Participant management
@@ -158,7 +158,7 @@ export class RescueController {
     const requiredParticipants = rescue.required_participants || 0;
 
     if (currentParticipants >= requiredParticipants) {
-      sendError(res, new AppError(400, 'fail', `Cannot add more participants. Maximum required participants (${requiredParticipants}) already reached.`));
+      sendError(res, new AppError(400, 'fail', `Không thể thêm thêm người tham gia. Đã đạt số lượng tối đa (${requiredParticipants}) người.`));
       return;
     }
 
@@ -212,12 +212,12 @@ export class RescueController {
 
       const participant = rescue.participants?.find((p: any) => p.users_id === userId);
       if (!participant) {
-        sendError(res, new AppError(404, 'fail', 'You are not a participant in this rescue'));
+        sendError(res, new AppError(404, 'fail', 'Bạn không phải là người tham gia chiến dịch này'));
         return;
       }
 
       await this.rescueService.removeParticipant(participant.id);
-      sendSuccess(res, { message: 'Successfully left rescue campaign' }, 200);
+      sendSuccess(res, { message: 'Rời khỏi chiến dịch cứu hộ thành công' }, 200);
     } catch (error: any) {
       if (error.message?.includes('Authentication required') || 
           error.message?.includes('User profile not found')) {
@@ -236,7 +236,7 @@ export class RescueController {
 
   removeParticipant = asyncHandler(async (req: Request, res: Response) => {
     await this.rescueService.removeParticipant(req.params.participantId);
-    sendSuccess(res, { message: 'Participant removed successfully' }, 200);
+    sendSuccess(res, { message: 'Xóa người tham gia thành công' }, 200);
   });
 
   // Report management
@@ -254,7 +254,7 @@ export class RescueController {
 
   removeReport = asyncHandler(async (req: Request, res: Response) => {
     await this.rescueService.removeReport(req.params.rescueReportId);
-    sendSuccess(res, { message: 'Report removed successfully' }, 200);
+    sendSuccess(res, { message: 'Xóa báo cáo thành công' }, 200);
   });
 
   // User's rescues
@@ -286,7 +286,7 @@ export class RescueController {
       // Check if user is a leader
       const isLeader = await this.checkLeaderPermission(req.params.id, userId);
       if (!isLeader) {
-        sendError(res, new AppError(403, 'fail', 'Only rescue leaders can start the campaign'));
+        sendError(res, new AppError(403, 'fail', 'Chỉ trưởng nhóm mới có thể bắt đầu chiến dịch'));
         return;
       }
 
@@ -309,7 +309,7 @@ export class RescueController {
       // Check if user is a leader
       const isLeader = await this.checkLeaderPermission(req.params.id, userId);
       if (!isLeader) {
-        sendError(res, new AppError(403, 'fail', 'Only rescue leaders can cancel the campaign'));
+        sendError(res, new AppError(403, 'fail', 'Chỉ trưởng nhóm mới có thể hủy chiến dịch'));
         return;
       }
 
@@ -338,7 +338,7 @@ export class RescueController {
       }));
 
       if (!rescueReport) {
-        sendError(res, new AppError(404, 'fail', 'Rescue report not found'));
+        sendError(res, new AppError(404, 'fail', 'Không tìm thấy báo cáo cứu hộ'));
         return;
       }
 
@@ -349,7 +349,7 @@ export class RescueController {
       // Check if user is a leader
       const isLeader = await this.checkLeaderPermission(rescueId, userId);
       if (!isLeader) {
-        sendError(res, new AppError(403, 'fail', 'Only rescue leaders can update report progress'));
+        sendError(res, new AppError(403, 'fail', 'Chỉ trưởng nhóm mới có thể cập nhật tiến độ báo cáo'));
         return;
       }
 
@@ -377,7 +377,7 @@ export class RescueController {
       // Check if user is a leader
       const isLeader = await this.checkLeaderPermission(req.params.id, userId);
       if (!isLeader) {
-        sendError(res, new AppError(403, 'fail', 'Only rescue leaders can complete the campaign'));
+        sendError(res, new AppError(403, 'fail', 'Chỉ trưởng nhóm mới có thể hoàn tất chiến dịch'));
         return;
       }
 

@@ -23,14 +23,14 @@ class ChatbotService {
   private handleGeminiError(error: any, context: string): string {
     if (error.status === 429) {
       logger.warn(`Rate limit hit in ${context}`);
-      return "I'm currently experiencing high demand. Please try again in a few seconds, or I can help you right away with these options:\n\n" +
-        "• Visit our Pets page to browse available animals\n" +
-        "• For emergencies, contact your local veterinarian or animal rescue service\n" +
-        "• Call us directly for immediate assistance";
+      return "Hiện tại mình đang nhận được nhiều yêu cầu quá. Bạn thử lại sau vài giây nhé, hoặc mình có thể giúp bạn ngay với các lựa chọn sau:\n\n" +
+        "• Ghé trang Thú cưng để xem các bé đang có sẵn\n" +
+        "• Trường hợp khẩn cấp, hãy liên hệ bác sĩ thú y hoặc đội cứu hộ động vật địa phương\n" +
+        "• Gọi trực tiếp cho chúng mình để được hỗ trợ ngay";
     }
     
     logger.error(`Error in ${context}:`, error);
-    return "I apologize, but I'm having trouble responding right now. Please try again in a moment.";
+    return "Xin lỗi bạn, mình đang gặp chút trục trặc. Bạn thử lại sau giây lát nhé.";
   }
 
   /**
@@ -68,35 +68,16 @@ class ChatbotService {
   private async detectIntent(message: string): Promise<'pet_search' | 'rescue_help' | 'general'> {
     const lowerMessage = message.toLowerCase();
 
-    // Keywords for pet search
+    // Keywords for pet search (English and Vietnamese)
     const petSearchKeywords = [
-      'adopt',
-      'adoption',
-      'pet',
-      'dog',
-      'cat',
-      'animal',
-      'looking for',
-      'find',
-      'search',
-      'available',
-      'breed',
+      'adopt', 'adoption', 'pet', 'dog', 'cat', 'animal', 'looking for', 'find', 'search', 'available', 'breed',
+      'nhận nuôi', 'nuôi', 'thú cưng', 'chó', 'mèo', 'động vật', 'tìm', 'tìm kiếm', 'có sẵn', 'giống',
     ];
 
-    // Keywords for rescue help
+    // Keywords for rescue help (English and Vietnamese)
     const rescueHelpKeywords = [
-      'rescue',
-      'injured',
-      'hurt',
-      'help',
-      'first aid',
-      'emergency',
-      'save',
-      'found',
-      'stray',
-      'calm',
-      'scared',
-      'aggressive',
+      'rescue', 'injured', 'hurt', 'help', 'first aid', 'emergency', 'save', 'found', 'stray', 'calm', 'scared', 'aggressive',
+      'cứu', 'cứu hộ', 'bị thương', 'đau', 'giúp', 'sơ cứu', 'khẩn cấp', 'cấp cứu', 'bị lạc', 'hoang', 'sợ hãi', 'hung dữ',
     ];
 
     const hasPetKeywords = petSearchKeywords.some((keyword) => lowerMessage.includes(keyword));
@@ -118,16 +99,16 @@ class ChatbotService {
     try {
       // Extract search criteria using Gemini
       const criteriaPrompt = `
-Extract pet search criteria from this message: "${message}"
+Trích xuất tiêu chí tìm kiếm thú cưng từ tin nhắn này: "${message}"
 
-Return a JSON object with these fields (only include fields that are mentioned):
-- species: "dog", "cat", or "other"
-- age: "young" (0-2 years), "adult" (3-7 years), or "senior" (8+ years)
-- size: "small", "medium", or "large"
-- gender: "male" or "female"
+Trả về một đối tượng JSON với các trường sau (chỉ bao gồm các trường được đề cập):
+- species: "dog" (chó), "cat" (mèo), hoặc "other" (khác)
+- age: "young" (0-2 tuổi), "adult" (3-7 tuổi), hoặc "senior" (8+ tuổi)
+- size: "small" (nhỏ), "medium" (vừa), hoặc "large" (lớn)
+- gender: "male" (đực/trống), hoặc "female" (cái/mái)
 
-If no specific criteria are mentioned, return an empty object {}.
-Return ONLY valid JSON, no other text.
+Nếu không có tiêu chí cụ thể nào được đề cập, trả về đối tượng rỗng {}.
+CHỈ trả về JSON hợp lệ, không có văn bản khác.
 `;
 
       const criteriaResult = await geminiModel.generateContent(criteriaPrompt);
@@ -150,26 +131,26 @@ Return ONLY valid JSON, no other text.
       // Generate response with pet recommendations
       const frontendUrl = 'http://localhost:5173';
       const responsePrompt = `
-You are a warm, friendly pet adoption helper. User asked: "${message}"
+Bạn là trợ lý hỗ trợ nhận nuôi thú cưng thân thiện, ấm áp. Người dùng hỏi: "${message}"
 
-I found these adorable pets (${pets.length} available):
+Mình tìm thấy những bé đáng yêu này (${pets.length} bé đang có sẵn):
 ${pets.map((p, i) => `
-${i + 1}. **${p.name}** - ${p.species}
-   Age: ${p.age} ${p.age_unit || 'years'}, Size: ${p.size || 'medium'}, Gender: ${p.gender || 'unknown'}
+${i + 1}. **${p.name}** - ${p.species === 'dog' ? 'Chó' : p.species === 'cat' ? 'Mèo' : p.species}
+   Tuổi: ${p.age} ${p.age_unit === 'months' ? 'tháng' : 'tuổi'}, Kích thước: ${p.size === 'small' ? 'nhỏ' : p.size === 'medium' ? 'vừa' : p.size === 'large' ? 'lớn' : 'vừa'}, Giới tính: ${p.gender === 'male' ? 'đực' : p.gender === 'female' ? 'cái' : 'chưa rõ'}
    Link: ${frontendUrl}/pets/${p.id}
-   ${p.description || 'A sweet companion looking for love!'}
+   ${p.description || 'Một người bạn ngọt ngào đang tìm kiếm tình yêu thương!'}
 `).join('\n')}
 
-Write a BRIEF, sincere response (max 120 words):
-- Be genuinely warm and encouraging (not overly enthusiastic)
-- Present 2-3 best matches naturally
-- For each: **Name** (age, size, gender) + one endearing trait
-- Include: [Meet Name]({link})
-- If no matches: warmly suggest alternatives
-- End with: "Would you like to know more about any of them?"
+Viết phản hồi NGẮN GỌN, chân thành bằng TIẾNG VIỆT (tối đa 120 từ):
+- Thật sự ấm áp và khuyến khích (không quá nhiệt tình)
+- Giới thiệu 2-3 bé phù hợp nhất một cách tự nhiên
+- Mỗi bé: **Tên** (tuổi, kích thước, giới tính) + một đặc điểm đáng yêu
+- Bao gồm: [Gặp Tên]({link})
+- Nếu không có kết quả phù hợp: gợi ý thay thế một cách ấm áp
+- Kết thúc bằng: "Bạn có muốn biết thêm về bé nào không?"
 
-Tone: Sincere, helpful, conversational (like talking to a friend).
-Avoid: Excessive excitement, formal language, sales-pitch tone.
+Giọng điệu: Chân thành, hữu ích, trò chuyện (như nói chuyện với bạn bè).
+Tránh: Quá hào hứng, ngôn ngữ trang trọng, giọng điệu bán hàng.
 `;
 
       const result = await geminiModel.generateContent(responsePrompt);
@@ -240,13 +221,13 @@ Avoid: Excessive excitement, formal language, sales-pitch tone.
       // If image is provided, analyze it first
       if (imageData) {
         const imageAnalysisPrompt = `
-You are a veterinary expert assistant. Analyze this image of an animal and provide:
-1. Species identification (if visible)
-2. Observable condition (injuries, distress signs, body language)
-3. Urgency level (low, medium, high, critical)
-4. Any visible health concerns
+Bạn là trợ lý chuyên môn thú y. Phân tích hình ảnh động vật này và cung cấp:
+1. Nhận diện loài (nếu nhìn thấy được)
+2. Tình trạng quan sát được (vết thương, dấu hiệu đau đớn, ngôn ngữ cơ thể)
+3. Mức độ khẩn cấp (thấp, trung bình, cao, nguy kịch)
+4. Các vấn đề sức khỏe có thể nhìn thấy
 
-Be specific but concise. If you can't clearly see something, say so.
+Hãy cụ thể nhưng ngắn gọn. Nếu không thể nhìn rõ điều gì, hãy nói rõ.
 `;
 
         const imageParts = [
@@ -265,30 +246,30 @@ Be specific but concise. If you can't clearly see something, say so.
 
       // Generate rescue guidance
       const guidancePrompt = `
-You are a caring animal rescue guide helping someone in need.
+Bạn là người hướng dẫn cứu hộ động vật chu đáo, đang giúp đỡ ai đó cần hỗ trợ.
 
-Situation: "${message}"
-${analysisContext ? `\nWhat I can see: ${analysisContext}` : ''}
+Tình huống: "${message}"
+${analysisContext ? `\nNhững gì mình nhìn thấy: ${analysisContext}` : ''}
 
-Provide BRIEF, caring guidance (max 180 words):
+Cung cấp hướng dẫn NGẮN GỌN, chu đáo bằng TIẾNG VIỆT (tối đa 180 từ):
 
-**What to do now:**
-- 2-3 clear, gentle steps
-- Start with the most important action
+**Cần làm ngay:**
+- 2-3 bước rõ ràng, nhẹ nhàng
+- Bắt đầu với hành động quan trọng nhất
 
-**Keeping everyone safe:**
-- Key safety tips (for both person and animal)
-- How to approach calmly
+**Giữ an toàn cho mọi người:**
+- Các mẹo an toàn chính (cho cả người và động vật)
+- Cách tiếp cận một cách bình tĩnh
 
-**When to call a vet:**
-- Signs that need professional care
+**Khi nào cần gọi bác sĩ thú y:**
+- Các dấu hiệu cần chăm sóc chuyên nghiệp
 
-Tone: Calm, caring, supportive (like helping a friend).
-Avoid: Urgent warnings, alarm, formal instructions.
-Use: Simple language, reassuring phrases, practical tips.
+Giọng điệu: Bình tĩnh, chu đáo, hỗ trợ (như giúp đỡ một người bạn).
+Tránh: Cảnh báo khẩn cấp, báo động, hướng dẫn trang trọng.
+Sử dụng: Ngôn ngữ đơn giản, cụm từ trấn an, mẹo thực tế.
 
-If serious: Gently recommend vet care without alarming.
-End with: "You're doing the right thing by helping. Let me know if you need more guidance."
+Nếu nghiêm trọng: Nhẹ nhàng đề xuất chăm sóc thú y mà không gây lo lắng.
+Kết thúc bằng: "Bạn đang làm đúng khi giúp đỡ. Cho mình biết nếu bạn cần thêm hướng dẫn nhé."
 `;
 
       const result = await geminiModel.generateContent(guidancePrompt);
@@ -304,24 +285,24 @@ End with: "You're doing the right thing by helping. Let me know if you need more
   private async handleGeneralQuery(message: string, history: ChatMessage[]): Promise<string> {
     try {
       const contextPrompt = `
-You're a friendly helper at "Second Chance Sanctuary" animal shelter.
+Bạn là trợ lý thân thiện tại trại cứu hộ động vật "Second Chance Sanctuary".
 
-What we do: Help people adopt pets and rescue animals in need.
+Chúng mình làm gì: Giúp mọi người nhận nuôi thú cưng và cứu hộ động vật cần giúp đỡ.
 
-User: "${message}"
+Người dùng: "${message}"
 
-Recent chat:
+Trò chuyện gần đây:
 ${history.slice(-2).map((h) => `${h.role}: ${h.content}`).join('\n')}
 
-Response guidelines (max 80 words):
-- Be warm, sincere, and caring - like a trusted friend who genuinely wants to help
-- Listen first, understand their needs
-- For adoption questions: Ask about their lifestyle and preferences with genuine interest
-- For rescue concerns: Show empathy and ask gentle questions to understand the situation
-- Keep it natural and conversational, not formal
-- End with a thoughtful, helpful question
+Hướng dẫn phản hồi bằng TIẾNG VIỆT (tối đa 80 từ):
+- Ấm áp, chân thành và chu đáo - như một người bạn đáng tin cậy thực sự muốn giúp đỡ
+- Lắng nghe trước, hiểu nhu cầu của họ
+- Với câu hỏi về nhận nuôi: Hỏi về lối sống và sở thích của họ với sự quan tâm thật sự
+- Với lo ngại về cứu hộ: Thể hiện sự đồng cảm và hỏi những câu hỏi nhẹ nhàng để hiểu tình huống
+- Giữ tự nhiên và trò chuyện, không trang trọng
+- Kết thúc bằng một câu hỏi chu đáo, hữu ích
 
-Tone: Sincere, caring, approachable. Think of talking to a friend who needs your support.
+Giọng điệu: Chân thành, chu đáo, dễ gần. Như đang nói chuyện với một người bạn cần hỗ trợ.
 `;
 
       const result = await geminiModel.generateContent(contextPrompt);
@@ -336,11 +317,11 @@ Tone: Sincere, caring, approachable. Think of talking to a friend who needs your
    */
   getConversationStarters(): string[] {
     return [
-      "I'm looking to adopt a dog. What do you have available?",
-      'Can you help me find a cat that would be good with children?',
-      'I found an injured stray animal. What should I do?',
-      'How do I calm down a scared dog?',
-      'What are the adoption requirements?',
+      'Mình muốn nhận nuôi chó. Các bạn có bé nào không?',
+      'Bạn có thể giúp mình tìm mèo phù hợp với trẻ em không?',
+      'Mình tìm thấy động vật hoang bị thương. Nên làm gì?',
+      'Làm sao để làm dịu một chú chó đang sợ hãi?',
+      'Các yêu cầu nhận nuôi là gì?',
     ];
   }
 }

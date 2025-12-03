@@ -9,7 +9,9 @@ import { PetService } from './pet.service';
 export class NotificationService extends BaseService<DirectusNotification> {
   private transporter: nodemailer.Transporter;
   private petService: PetService;
-  private adminSdk = adminDirectus; // Use admin client for all notification operations
+  // Keep admin SDK for notifications since they need cross-user access
+  // and system-level operations (creating notifications for other users)
+  protected notificationSdk = adminDirectus;
 
   constructor() {
     super('notifications');
@@ -57,7 +59,7 @@ export class NotificationService extends BaseService<DirectusNotification> {
       if (notificationData.user_id && notificationData.related_id && notificationData.type) {
         const fiveSecondsAgo = new Date(Date.now() - 5000).toISOString();
         
-        const existingNotifications = await this.adminSdk.request(readItems(this.collection, {
+        const existingNotifications = await this.notificationSdk.request(readItems(this.collection, {
           filter: {
             user_id: { _eq: notificationData.user_id },
             related_id: { _eq: notificationData.related_id },
@@ -73,7 +75,7 @@ export class NotificationService extends BaseService<DirectusNotification> {
         }
       }
       
-      return await this.adminSdk.request(createItem(this.collection, notificationData));
+      return await this.notificationSdk.request(createItem(this.collection, notificationData));
     } catch (error) {
       console.error('Error creating notification:', error);
       throw this.handleError(error);
@@ -98,7 +100,7 @@ export class NotificationService extends BaseService<DirectusNotification> {
         filter.is_read = { _eq: false };
       }
 
-      const items = await this.adminSdk.request(readItems(this.collection, {
+      const items = await this.notificationSdk.request(readItems(this.collection, {
         filter,
         sort: ['-date_created'],
       }));
@@ -113,13 +115,42 @@ export class NotificationService extends BaseService<DirectusNotification> {
   }
 
   /**
+   * Get a single notification by ID
+   * Verifies that the notification belongs to the user
+   */
+  async getNotificationById(notificationId: string, userId: string) {
+    try {
+      const { readItem } = await import('@directus/sdk');
+      
+      // Get the notification
+      const notification = await this.notificationSdk.request(readItem(this.collection, notificationId));
+      
+      if (!notification) {
+        throw new Error('Notification not found');
+      }
+
+      // Convert to Directus user ID for comparison
+      const directusUserId = await this.getDirectusUserId(userId);
+      
+      // Verify ownership
+      if (notification.user_id !== directusUserId) {
+        throw new Error('Unauthorized access to notification');
+      }
+
+      return notification;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  /**
    * Mark notification as read
    * Uses admin SDK
    */
   async markAsRead(notificationId: string) {
     try {
       const { updateItem } = await import('@directus/sdk');
-      return await this.adminSdk.request(updateItem(this.collection, notificationId, {
+      return await this.notificationSdk.request(updateItem(this.collection, notificationId, {
         is_read: true,
         read_at: new Date().toISOString(),
       }));
@@ -180,7 +211,7 @@ export class NotificationService extends BaseService<DirectusNotification> {
       const { readItems } = await import('@directus/sdk');
       
       // Query the users collection to get the directus_user_id
-      const users = await this.adminSdk.request(readItems('users', {
+      const users = await this.notificationSdk.request(readItems('users', {
         filter: { id: { _eq: appUserId } },
         fields: ['directus_user_id'],
         limit: 1,
@@ -208,7 +239,7 @@ export class NotificationService extends BaseService<DirectusNotification> {
       const { readItems } = await import('@directus/sdk');
       
       // Query the users collection directly for app user data
-      const users = await this.adminSdk.request(readItems('users', {
+      const users = await this.notificationSdk.request(readItems('users', {
         filter: { id: { _eq: userId } },
         fields: ['id', 'email', 'first_name', 'last_name', 'directus_user_id'],
         limit: 1,
@@ -220,12 +251,12 @@ export class NotificationService extends BaseService<DirectusNotification> {
       
       // If not found in users collection, try as directus user ID
       const { readUser } = await import('@directus/sdk');
-      const directusUser = await this.adminSdk.request(readUser(userId));
+      const directusUser = await this.notificationSdk.request(readUser(userId));
       if (directusUser && directusUser.email) {
         return directusUser;
       }
       
-      throw new Error('User not found or has no email');
+      throw new Error('Không tìm thấy người dùng hoặc không có email');
     } catch (error) {
       console.error('Error fetching user details:', error);
       // Return a default user object to prevent notification failures from breaking the main operation

@@ -37,7 +37,7 @@ export class PetController {
   getPet = asyncHandler(async (req: Request, res: Response) => {
     const pet = await this.petService.findOne(req.params.id);
     if (!pet) {
-      sendError(res, new AppError(404, 'fail', 'Pet not found'));
+      sendError(res, new AppError(404, 'fail', 'Không tìm thấy thú cưng'));
       return;
     }
     
@@ -100,7 +100,7 @@ export class PetController {
     }
     
     await this.petService.delete(req.params.id);
-    sendSuccess(res, { message: 'Pet deleted successfully' }, 200);
+    sendSuccess(res, { message: 'Xóa thú cưng thành công' }, 200);
   });
 
   // // Image handling
