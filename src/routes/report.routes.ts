@@ -24,6 +24,7 @@ router.get('/pending', reportController.getPendingReports);
 router.get('/:id', validateSchema(reportIdSchema), reportController.getReport);
 router.post('/', upload.array('images', 5), validateFormData(createReportSchema), reportController.createReport);
 router.patch('/:id', validateSchema(updateReportSchema), reportController.updateReport);
+router.patch('/me/:id', upload.array('images', 5), validateFormData(updateReportSchema), reportController.updateMyReport);
 router.delete('/:id', validateSchema(reportIdSchema), reportController.deleteReport);
 
 // Additional report routes

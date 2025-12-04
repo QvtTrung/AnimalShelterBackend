@@ -193,6 +193,50 @@ export class ReportController {
     sendSuccess(res, reports.data, 200, { total: reports.total });
   });
 
+  updateMyReport = asyncHandler(async (req: Request, res: Response) => {
+    // Get current authenticated user ID from directus
+    const { readMe } = await import('@directus/sdk');
+    const { directus } = await import('../config/directus');
+    
+    const currentUser = await directus.request(readMe({ fields: ['id'] }));
+    
+    if (!currentUser || !currentUser.id) {
+      sendError(res, new AppError(401, 'fail', 'Yêu cầu đăng nhập'));
+      return;
+    }
+    
+    // Get the report to check ownership
+    const report = await this.reportService.findOne(req.params.id);
+    if (!report) {
+      sendError(res, new AppError(404, 'fail', 'Không tìm thấy báo cáo'));
+      return;
+    }
+    
+    // Check if user is the creator of the report
+    const reportCreatorId = typeof report.user_created === 'string' 
+      ? report.user_created 
+      : report.user_created?.id;
+    
+    if (reportCreatorId !== currentUser.id) {
+      sendError(res, new AppError(403, 'fail', 'Bạn không có quyền cập nhật báo cáo này'));
+      return;
+    }
+    
+    // Only allow updating certain fields (not status which is managed by admin/rescue team)
+    const allowedUpdates: any = {};
+    const allowedFields = ['title', 'description', 'species', 'type', 'urgency_level', 'location', 'coordinates', 'contact_name', 'contact_phone', 'contact_email'];
+    
+    for (const field of allowedFields) {
+      if (req.body[field] !== undefined) {
+        allowedUpdates[field] = req.body[field];
+      }
+    }
+    
+    // Update the report
+    const updatedReport = await this.reportService.update(req.params.id, allowedUpdates);
+    sendSuccess(res, updatedReport, 200);
+  });
+
   getPendingReports = asyncHandler(async (req: Request, res: Response) => {
     const result = await this.reportService.findPending(req.query);
     sendSuccess(res, result.data, 200, { total: result.total });

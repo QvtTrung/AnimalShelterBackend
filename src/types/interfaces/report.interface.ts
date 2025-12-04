@@ -6,7 +6,7 @@ export interface DirectusReport {
   date_created?: string;
   user_updated?: string;  // reference to directus_users collection
   date_updated?: string;
-  species: string;
+  species: 'Dog' | 'Cat' | 'Other';
   description: string;
   location: string; // This is a point type in the database
   title: string;

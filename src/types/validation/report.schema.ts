@@ -5,9 +5,13 @@ export const createReportSchema = z.object({
   body: z.object({
     title: z.string().min(1, 'Report title is required'),
     description: z.string().min(1, 'Report description is required'),
-    species: z.string().min(1, 'Species is required'),
+    species: z.enum(['Dog', 'Cat', 'Other'], {
+      required_error: 'Species is required',
+      invalid_type_error: 'Species must be Dog, Cat, or Other'
+    }),
     type: z.enum(['abuse', 'abandonment', 'injured_animal', 'other'], {
-      required_error: 'Report type is required'
+      required_error: 'Report type is required',
+      invalid_type_error: 'Invalid report type'
     }),
     urgency_level: z.enum(['low', 'medium', 'high', 'critical'], {
       required_error: 'Urgency level is required'
