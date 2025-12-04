@@ -20,7 +20,7 @@ export const createReportSchema = z.object({
     status: z.enum(['pending', 'assigned', 'resolved']).default('pending'),
     contact_name: z.string().optional(),
     contact_phone: z.string().optional(),
-    contact_email: z.string().email('Invalid email format').optional(),
+    contact_email: z.string().email('Invalid email format').optional().or(z.literal('')).transform(val => val === '' ? undefined : val),
     linked_pet: z.string().uuid('Invalid pet ID').optional(),
     coordinates: z.object({
       type: z.literal("Point"),

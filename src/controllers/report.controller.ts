@@ -189,8 +189,30 @@ export class ReportController {
     }
     
     // Use directus_user_id directly for user_created field
-    const reports = await this.reportService.getUserReportsByDirectusUserId(currentUser.id);
-    sendSuccess(res, reports.data, 200, { total: reports.total });
+    const result = await this.reportService.getUserReportsByDirectusUserId(currentUser.id);
+    
+    // Transform reports_image to images and parse coordinates
+    const transformedData = result.data.map((report: any) => {
+      const { reports_image, coordinates, ...rest } = report;
+      
+      // Parse coordinates if it's a string
+      let parsedCoordinates = coordinates;
+      if (typeof coordinates === 'string') {
+        try {
+          parsedCoordinates = JSON.parse(coordinates);
+        } catch (e) {
+          console.warn(`Failed to parse coordinates for report ${report.id}`);
+        }
+      }
+      
+      return {
+        ...rest,
+        coordinates: parsedCoordinates,
+        images: reports_image || [],
+      };
+    });
+    
+    sendSuccess(res, transformedData, 200, { total: result.total });
   });
 
   updateMyReport = asyncHandler(async (req: Request, res: Response) => {
@@ -212,15 +234,35 @@ export class ReportController {
       return;
     }
     
-    // Check if user is the creator of the report
-    const reportCreatorId = typeof report.user_created === 'string' 
-      ? report.user_created 
-      : report.user_created?.id;
+    // Debug: Log the report creator info
+    console.log('Current user ID:', currentUser.id);
+    console.log('Report user_created:', JSON.stringify(report.user_created, null, 2));
     
-    if (reportCreatorId !== currentUser.id) {
+    // Check if user is the creator of the report
+    let reportCreatorDirectusId: string | undefined;
+    if (typeof report.user_created === 'string') {
+      // If it's just a string, it's already the directus_user_id
+      reportCreatorDirectusId = report.user_created;
+    } else if (report.user_created && typeof report.user_created === 'object') {
+      // If it's an object, get the directus_user_id field (NOT the id field which is the users table ID)
+      const userObj = report.user_created as any;
+      reportCreatorDirectusId = userObj.directus_user_id;
+    }
+    
+    console.log('Extracted reportCreatorDirectusId:', reportCreatorDirectusId);
+    
+    if (!reportCreatorDirectusId) {
+      sendError(res, new AppError(403, 'fail', 'Không thể xác định người tạo báo cáo'));
+      return;
+    }
+    
+    if (reportCreatorDirectusId !== currentUser.id) {
       sendError(res, new AppError(403, 'fail', 'Bạn không có quyền cập nhật báo cáo này'));
       return;
     }
+    
+    // Get uploaded files if any
+    const files = req.files as Express.Multer.File[];
     
     // Only allow updating certain fields (not status which is managed by admin/rescue team)
     const allowedUpdates: any = {};
@@ -234,7 +276,21 @@ export class ReportController {
     
     // Update the report
     const updatedReport = await this.reportService.update(req.params.id, allowedUpdates);
-    sendSuccess(res, updatedReport, 200);
+    
+    // Upload new images if provided
+    if (files && files.length > 0) {
+      for (const file of files) {
+        await this.reportImageService.create({
+          report_id: req.params.id,
+          image_url: file.path
+        });
+      }
+    }
+    
+    // Fetch the updated report with images
+    const reportWithImages = await this.reportService.findOne(req.params.id);
+    
+    sendSuccess(res, reportWithImages, 200);
   });
 
   getPendingReports = asyncHandler(async (req: Request, res: Response) => {

@@ -100,7 +100,7 @@ export class ReportService extends BaseService<Report> {
               // Query the 'users' collection using directus_user_id
               const users = await this.sdk.request(readItems('users', {
                 filter: { directus_user_id: { _eq: userCreated } },
-                fields: ['id', 'first_name', 'last_name', 'email'],
+                fields: ['id', 'directus_user_id', 'first_name', 'last_name', 'email'],
                 limit: 1
               }));
               
@@ -163,7 +163,7 @@ export class ReportService extends BaseService<Report> {
           // Query the 'users' collection using directus_user_id
           const users = await this.sdk.request(readItems('users', {
             filter: { directus_user_id: { _eq: userCreated } },
-            fields: ['id', 'first_name', 'last_name', 'email'],
+            fields: ['id', 'directus_user_id', 'first_name', 'last_name', 'email'],
             limit: 1
           }));
           

@@ -209,14 +209,28 @@ export class DashboardService extends BaseService<any> {
             'location',
             'coordinates',
             'date_created',
-            'reports_image.id',
-            'reports_image.image_url',
           ],
         })
       );
 
+      // Manually fetch images for each report
+      const reportsWithImages = await Promise.all(
+        (Array.isArray(reports) ? reports : []).map(async (report: any) => {
+          try {
+            const images = await this.sdk.request(readItems('reports_image', {
+              fields: ['*'],
+              filter: { report_id: { _eq: report.id } }
+            }));
+            return { ...report, reports_image: images || [] };
+          } catch (error: any) {
+            console.warn(`Could not fetch images for report ${report.id}:`, error.message);
+            return { ...report, reports_image: [] };
+          }
+        })
+      );
+
       // Calculate distances and filter by radius
-      const reportsWithDistance = reports
+      const reportsWithDistance = reportsWithImages
         ?.map((report: any) => {
           // Parse coordinates if they're stored as string
           let coords = report.coordinates;
@@ -238,11 +252,16 @@ export class DashboardService extends BaseService<any> {
           const distance = this.calculateDistance(userLat, userLng, reportLat, reportLng);
 
           if (distance <= radiusMeters) {
+            // Transform reports_image to images array
+            const images = Array.isArray(report.reports_image) 
+              ? report.reports_image 
+              : [];
+            
             return {
               ...report,
               distance_meters: Math.round(distance),
               distance_km: (distance / 1000).toFixed(2),
-              images: report.reports_image || [],
+              images,
             };
           }
 
