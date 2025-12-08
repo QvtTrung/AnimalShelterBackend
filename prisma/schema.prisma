@@ -16,11 +16,15 @@ model adoptions {
   user_updated                                          String?         @db.Char(36)
   date_updated                                          DateTime?       @db.Timestamp(0)
   pet_id                                                String?         @db.Char(36)
-  user_id                                               String?         @db.Char(36)
   approval_date                                         DateTime?       @db.DateTime(0)
+  notes                                                 String?         @db.VarChar(255)
+  appointment_date                                      DateTime?       @db.DateTime(0)
+  confirmation_sent_at                                  DateTime?       @db.DateTime(0)
+  confirmation_expires_at                               DateTime?       @db.DateTime(0)
+  user_id                                               String?         @db.Char(36)
   pets                                                  pets?           @relation(fields: [pet_id], references: [id], onUpdate: NoAction, map: "adoptions_pet_id_foreign")
   directus_users_adoptions_user_createdTodirectus_users directus_users? @relation("adoptions_user_createdTodirectus_users", fields: [user_created], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "adoptions_user_created_foreign")
-  directus_users_adoptions_user_idTodirectus_users      directus_users? @relation("adoptions_user_idTodirectus_users", fields: [user_id], references: [id], onUpdate: NoAction, map: "adoptions_user_id_foreign")
+  directus_users_adoptions_user_idTodirectus_users      users?          @relation("adoptions_user_idTodirectus_users", fields: [user_id], references: [id], onUpdate: NoAction, map: "adoptions_user_id_foreign")
   directus_users_adoptions_user_updatedTodirectus_users directus_users? @relation("adoptions_user_updatedTodirectus_users", fields: [user_updated], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "adoptions_user_updated_foreign")
 
   @@index([pet_id], map: "adoptions_pet_id_foreign")
@@ -522,7 +526,6 @@ model directus_users {
   theme_dark_overrides                                                    Json?
   text_direction                                                          String                   @default("auto") @db.VarChar(255)
   adoptions_adoptions_user_createdTodirectus_users                        adoptions[]              @relation("adoptions_user_createdTodirectus_users")
-  adoptions_adoptions_user_idTodirectus_users                             adoptions[]              @relation("adoptions_user_idTodirectus_users")
   adoptions_adoptions_user_updatedTodirectus_users                        adoptions[]              @relation("adoptions_user_updatedTodirectus_users")
   directus_access                                                         directus_access[]
   directus_comments_directus_comments_user_createdTodirectus_users        directus_comments[]      @relation("directus_comments_user_createdTodirectus_users")
@@ -541,6 +544,11 @@ model directus_users {
   directus_roles                                                          directus_roles?          @relation(fields: [role], references: [id], onUpdate: NoAction, map: "directus_users_role_foreign")
   directus_versions_directus_versions_user_createdTodirectus_users        directus_versions[]      @relation("directus_versions_user_createdTodirectus_users")
   directus_versions_directus_versions_user_updatedTodirectus_users        directus_versions[]      @relation("directus_versions_user_updatedTodirectus_users")
+  notifications_notifications_user_createdTodirectus_users                notifications[]          @relation("notifications_user_createdTodirectus_users")
+  notifications_notifications_user_idTodirectus_users                     notifications[]          @relation("notifications_user_idTodirectus_users")
+  notifications_notifications_user_updatedTodirectus_users                notifications[]          @relation("notifications_user_updatedTodirectus_users")
+  pet_breed_pet_breed_user_createdTodirectus_users                        pet_breed[]              @relation("pet_breed_user_createdTodirectus_users")
+  pet_breed_pet_breed_user_updatedTodirectus_users                        pet_breed[]              @relation("pet_breed_user_updatedTodirectus_users")
   pet_images                                                              pet_images[]
   pets_pets_user_createdTodirectus_users                                  pets[]                   @relation("pets_user_createdTodirectus_users")
   pets_pets_user_updatedTodirectus_users                                  pets[]                   @relation("pets_user_updatedTodirectus_users")
@@ -635,28 +643,27 @@ model pets {
 }
 
 model reports {
-  id                                                  String                @id @db.Char(36)
-  status                                              String                @default("pending") @db.VarChar(255)
+  id                                                  String            @id @db.Char(36)
+  status                                              String            @default("pending") @db.VarChar(255)
   sort                                                Int?
-  user_created                                        String?               @db.Char(36)
-  date_created                                        DateTime?             @db.Timestamp(0)
-  user_updated                                        String?               @db.Char(36)
-  date_updated                                        DateTime?             @db.Timestamp(0)
-  species                                             String?               @db.VarChar(255)
-  description                                         String?               @db.Text
-  location                                            Unsupported("point")?
-  title                                               String?               @db.VarChar(255)
-  type                                                String?               @db.VarChar(255)
-  urgency_level                                       String?               @db.VarChar(255)
-  contact_name                                        String?               @db.VarChar(255)
-  contact_phone                                       String?               @db.VarChar(255)
-  contact_email                                       String?               @db.VarChar(255)
-  coordinates                                         String?               @db.Text
+  user_created                                        String?           @db.Char(36)
+  date_created                                        DateTime?         @db.Timestamp(0)
+  user_updated                                        String?           @db.Char(36)
+  date_updated                                        DateTime?         @db.Timestamp(0)
+  species                                             String?           @db.VarChar(255)
+  description                                         String?           @db.Text
+  title                                               String?           @db.VarChar(255)
+  type                                                String?           @db.VarChar(255)
+  urgency_level                                       String?           @db.VarChar(255)
+  location                                            String?           @db.VarChar(255)
+  coordinates                                         String?           @db.VarChar(255)
+  contact_name                                        String?           @db.VarChar(255)
+  contact_phone                                       String?           @db.VarChar(255)
+  contact_email                                       String?           @db.VarChar(255)
   pets                                                pets?
-  directus_users_reports_user_createdTodirectus_users directus_users?       @relation("reports_user_createdTodirectus_users", fields: [user_created], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "reports_user_created_foreign")
-  directus_users_reports_user_updatedTodirectus_users directus_users?       @relation("reports_user_updatedTodirectus_users", fields: [user_updated], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "reports_user_updated_foreign")
-  reports_image_reports_image_image_urlToreports      reports_image[]       @relation("reports_image_image_urlToreports")
-  reports_image_reports_image_report_idToreports      reports_image[]       @relation("reports_image_report_idToreports")
+  directus_users_reports_user_createdTodirectus_users directus_users?   @relation("reports_user_createdTodirectus_users", fields: [user_created], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "reports_user_created_foreign")
+  directus_users_reports_user_updatedTodirectus_users directus_users?   @relation("reports_user_updatedTodirectus_users", fields: [user_updated], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "reports_user_updated_foreign")
+  reports_image_reports_image_report_idToreports      reports_image[]   @relation("reports_image_report_idToreports")
   rescues_reports                                     rescues_reports[]
 
   @@index([user_created], map: "reports_user_created_foreign")
@@ -668,13 +675,11 @@ model reports_image {
   sort                                     Int?
   user_created                             String?         @db.Char(36)
   date_created                             DateTime?       @db.Timestamp(0)
-  image_url                                String?         @db.VarChar(255)
   report_id                                String?         @db.Char(36)
-  reports_reports_image_image_urlToreports reports?        @relation("reports_image_image_urlToreports", fields: [image_url], references: [id], onUpdate: NoAction, map: "reports_image_image_url_foreign")
+  image_url                                String?         @db.VarChar(255)
   reports_reports_image_report_idToreports reports?        @relation("reports_image_report_idToreports", fields: [report_id], references: [id], onUpdate: NoAction, map: "reports_image_report_id_foreign")
   directus_users                           directus_users? @relation(fields: [user_created], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "reports_image_user_created_foreign")
 
-  @@index([image_url], map: "reports_image_image_url_foreign")
   @@index([report_id], map: "reports_image_report_id_foreign")
   @@index([user_created], map: "reports_image_user_created_foreign")
 }
@@ -700,13 +705,15 @@ model rescues {
 }
 
 model rescues_reports {
-  id         Int      @id @default(autoincrement()) @db.UnsignedInt
-  rescues_id String?  @db.Char(36)
-  reports_id String?  @db.Char(36)
-  status     String?  @db.VarChar(255)
-  note       String?  @db.Text
-  reports    reports? @relation(fields: [reports_id], references: [id], onUpdate: NoAction, map: "rescues_reports_reports_id_foreign")
-  rescues    rescues? @relation(fields: [rescues_id], references: [id], onUpdate: NoAction, map: "rescues_reports_rescues_id_foreign")
+  id         Int       @id @default(autoincrement()) @db.UnsignedInt
+  rescues_id String?   @db.Char(36)
+  reports_id String?   @db.Char(36)
+  status     String?   @db.VarChar(255)
+  note       String?   @db.Text
+  created_at DateTime? @db.DateTime(0)
+  updated_at DateTime? @db.DateTime(0)
+  reports    reports?  @relation(fields: [reports_id], references: [id], onUpdate: NoAction, map: "rescues_reports_reports_id_foreign")
+  rescues    rescues?  @relation(fields: [rescues_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "rescues_reports_rescues_id_foreign")
 
   @@index([reports_id], map: "rescues_reports_reports_id_foreign")
   @@index([rescues_id], map: "rescues_reports_rescues_id_foreign")
@@ -719,7 +726,7 @@ model rescues_users {
   role       String?   @db.VarChar(255)
   created_at DateTime? @db.DateTime(0)
   updated_at DateTime? @db.DateTime(0)
-  rescues    rescues?  @relation(fields: [rescues_id], references: [id], onUpdate: NoAction, map: "rescues_users_rescues_id_foreign")
+  rescues    rescues?  @relation(fields: [rescues_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "rescues_users_rescues_id_foreign")
   users      users?    @relation(fields: [users_id], references: [id], onUpdate: NoAction, map: "rescues_users_users_id_foreign")
 
   @@index([rescues_id], map: "rescues_users_rescues_id_foreign")
@@ -727,17 +734,57 @@ model rescues_users {
 }
 
 model users {
-  id               String          @id @db.Char(36)
-  status           String          @default("active") @db.VarChar(255)
-  sort             Int?
-  date_created     DateTime?       @db.Timestamp(0)
-  date_updated     DateTime?       @db.Timestamp(0)
-  first_name       String?         @db.VarChar(255)
-  last_name        String?         @db.VarChar(255)
-  directus_user_id String?         @unique(map: "users_directus_user_id_unique") @db.Char(36)
-  phone_number     String?         @db.VarChar(255)
-  avatar           String?         @db.VarChar(255)
-  address          String?         @db.VarChar(255)
-  rescues_users    rescues_users[]
-  directus_users   directus_users? @relation(fields: [directus_user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "users_directus_user_id_foreign")
+  id                                          String          @id @db.Char(36)
+  status                                      String          @default("active") @db.VarChar(255)
+  sort                                        Int?
+  date_created                                DateTime?       @db.Timestamp(0)
+  date_updated                                DateTime?       @db.Timestamp(0)
+  first_name                                  String?         @db.VarChar(255)
+  last_name                                   String?         @db.VarChar(255)
+  directus_user_id                            String?         @unique(map: "users_directus_user_id_unique") @db.Char(36)
+  phone_number                                String?         @db.VarChar(255)
+  avatar                                      String?         @db.VarChar(255)
+  address                                     String?         @db.VarChar(255)
+  email                                       String?         @db.VarChar(255)
+  role                                        String?         @default("user") @db.VarChar(255)
+  coordinates                                 String?         @db.VarChar(255)
+  adoptions_adoptions_user_idTodirectus_users adoptions[]     @relation("adoptions_user_idTodirectus_users")
+  rescues_users                               rescues_users[]
+  directus_users                              directus_users? @relation(fields: [directus_user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "users_directus_user_id_foreign")
+}
+
+model notifications {
+  id                                                        String          @id @db.Char(36)
+  sort                                                      Int?
+  user_created                                              String?         @db.Char(36)
+  date_created                                              DateTime?       @db.Timestamp(0)
+  user_updated                                              String?         @db.Char(36)
+  date_updated                                              DateTime?       @db.Timestamp(0)
+  user_id                                                   String?         @db.Char(36)
+  title                                                     String?         @db.VarChar(255)
+  message                                                   String?         @db.Text
+  type                                                      String?         @db.VarChar(255)
+  related_id                                                String?         @db.Char(36)
+  is_read                                                   Boolean?        @default(false)
+  read_at                                                   DateTime?       @db.Timestamp(0)
+  directus_users_notifications_user_createdTodirectus_users directus_users? @relation("notifications_user_createdTodirectus_users", fields: [user_created], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "notifications_user_created_foreign")
+  directus_users_notifications_user_idTodirectus_users      directus_users? @relation("notifications_user_idTodirectus_users", fields: [user_id], references: [id], onUpdate: NoAction, map: "notifications_user_id_foreign")
+  directus_users_notifications_user_updatedTodirectus_users directus_users? @relation("notifications_user_updatedTodirectus_users", fields: [user_updated], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "notifications_user_updated_foreign")
+
+  @@index([user_created], map: "notifications_user_created_foreign")
+  @@index([user_id], map: "notifications_user_id_foreign")
+  @@index([user_updated], map: "notifications_user_updated_foreign")
+}
+
+model pet_breed {
+  id                                                    String          @id @db.Char(36)
+  user_created                                          String?         @db.Char(36)
+  date_created                                          DateTime?       @db.Timestamp(0)
+  user_updated                                          String?         @db.Char(36)
+  date_updated                                          DateTime?       @db.Timestamp(0)
+  directus_users_pet_breed_user_createdTodirectus_users directus_users? @relation("pet_breed_user_createdTodirectus_users", fields: [user_created], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "pet_breed_user_created_foreign")
+  directus_users_pet_breed_user_updatedTodirectus_users directus_users? @relation("pet_breed_user_updatedTodirectus_users", fields: [user_updated], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "pet_breed_user_updated_foreign")
+
+  @@index([user_created], map: "pet_breed_user_created_foreign")
+  @@index([user_updated], map: "pet_breed_user_updated_foreign")
 }

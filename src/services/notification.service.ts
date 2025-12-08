@@ -87,7 +87,7 @@ export class NotificationService extends BaseService<DirectusNotification> {
    * Uses admin SDK to ensure access
    * Accepts either app user ID or directus user ID
    */
-  async getUserNotifications(userId: string, unreadOnly: boolean = false) {
+  async getUserNotifications(userId: string, unreadOnly: boolean = false, query?: any) {
     try {
       const { readItems } = await import('@directus/sdk');
       
@@ -100,9 +100,21 @@ export class NotificationService extends BaseService<DirectusNotification> {
         filter.is_read = { _eq: false };
       }
 
+      // Apply additional filters from query params
+      if (query?.filter) {
+        Object.assign(filter, query.filter);
+      }
+      
+      // Handle pagination
+      const page = Number(query?.page) || 1;
+      const limit = Number(query?.limit) || Number(query?.pageSize) || 10;
+      const offset = (page - 1) * limit;
+
       const items = await this.notificationSdk.request(readItems(this.collection, {
         filter,
         sort: ['-date_created'],
+        limit,
+        offset,
       }));
 
       return {
@@ -392,8 +404,6 @@ export class NotificationService extends BaseService<DirectusNotification> {
     customMessage?: string
   ) {
     try {
-      const user = await this.getUserDetails(userId);
-
       const statusMessages: Record<string, string> = {
         pending: 'Your rescue request has been received and is under review.',
         assigned: 'A rescue team has been assigned to your case.',
@@ -403,24 +413,8 @@ export class NotificationService extends BaseService<DirectusNotification> {
       };
 
       const message = customMessage || statusMessages[status] || 'Your rescue status has been updated.';
-      const detailsUrl = `${config.frontend.url}/rescues/show/${rescueId}`;
 
-      const html = emailTemplates.rescueStatusUpdate({
-        firstName: user.first_name || '',
-        lastName: user.last_name || '',
-        rescueId,
-        status,
-        message,
-        detailsUrl,
-      });
-
-      await this.sendEmail(
-        user.email,
-        `Rescue Mission Update: ${status}`,
-        html
-      );
-
-      // Create in-app notification
+      // Create in-app notification only (no email for rescue updates)
       await this.createNotification({
         user_id: userId,
         title: `Rescue Status: ${status}`,
@@ -430,9 +424,9 @@ export class NotificationService extends BaseService<DirectusNotification> {
         is_read: false,
       });
 
-      return { success: true, message: 'Rescue status update sent successfully' };
+      return { success: true, message: 'Rescue status notification created' };
     } catch (error) {
-      console.error('Error sending rescue status update:', error);
+      console.error('Error creating rescue notification:', error);
       throw error;
     }
   }
@@ -447,25 +441,7 @@ export class NotificationService extends BaseService<DirectusNotification> {
     description: string
   ) {
     try {
-      const user = await this.getUserDetails(rescuerId);
-      const detailsUrl = `${config.frontend.url}/rescues/show/${rescueId}`;
-
-      const html = emailTemplates.rescueAssignment({
-        firstName: user.first_name || '',
-        lastName: user.last_name || '',
-        rescueId,
-        location,
-        description,
-        detailsUrl,
-      });
-
-      await this.sendEmail(
-        user.email,
-        'New Rescue Assignment',
-        html
-      );
-
-      // Create in-app notification
+      // Create in-app notification only (no email for assignments)
       await this.createNotification({
         user_id: rescuerId,
         title: 'New Rescue Assignment',
@@ -494,34 +470,17 @@ export class NotificationService extends BaseService<DirectusNotification> {
     customMessage?: string
   ) {
     try {
-      const user = await this.getUserDetails(userId);
-
       const statusMessages: Record<string, string> = {
         pending: 'Your report has been received and is under review.',
         investigating: 'We are investigating your report.',
+        assigned: 'Your report has been claimed and a rescue team is being dispatched.',
         resolved: 'Your report has been resolved. Thank you for caring about animal welfare!',
         rejected: 'Your report has been reviewed and closed.',
       };
 
       const message = customMessage || statusMessages[status] || 'Your report status has been updated.';
-      const detailsUrl = `${config.frontend.url}/reports/show/${reportId}`;
 
-      const html = emailTemplates.reportStatusUpdate({
-        firstName: user.first_name || '',
-        lastName: user.last_name || '',
-        reportId,
-        status,
-        message,
-        detailsUrl,
-      });
-
-      await this.sendEmail(
-        user.email,
-        `Report Update: ${status}`,
-        html
-      );
-
-      // Create in-app notification
+      // Create in-app notification only (no email for report updates)
       await this.createNotification({
         user_id: userId,
         title: `Report Status: ${status}`,
@@ -531,287 +490,9 @@ export class NotificationService extends BaseService<DirectusNotification> {
         is_read: false,
       });
 
-      return { success: true, message: 'Report status update sent successfully' };
+      return { success: true, message: 'Report status notification created' };
     } catch (error) {
-      console.error('Error sending report status update:', error);
-      throw error;
-    }
-  }
-
-  // ==================== SYSTEM NOTIFICATIONS ====================
-
-  /**
-   * Get all admin users for system notifications
-   */
-  private async getAdminUsers(): Promise<any[]> {
-    try {
-      const { readItems } = await import('@directus/sdk');
-      
-      // Get users with admin role (role = 'Admin')
-      const adminUsers = await this.notificationSdk.request(readItems('users', {
-        filter: {
-          role: { _eq: 'Admin' }
-        },
-        fields: ['id', 'email', 'first_name', 'last_name', 'directus_user_id'],
-      }));
-      
-      return adminUsers || [];
-    } catch (error) {
-      console.error('Error fetching admin users:', error);
-      return [];
-    }
-  }
-
-  /**
-   * Notify all admins about new user registration
-   */
-  async notifyAdminsNewUserRegistered(
-    newUserId: string,
-    userName: string,
-    userEmail: string
-  ) {
-    try {
-      const admins = await this.getAdminUsers();
-      
-      if (admins.length === 0) {
-        console.warn('No admin users found to notify');
-        return { success: false, message: 'No admin users found' };
-      }
-
-      const detailsUrl = `${config.frontend.url}/users/show/${newUserId}`;
-
-      // Send notification to each admin
-      for (const admin of admins) {
-        if (!admin.directus_user_id) continue;
-
-        // Send email
-        const html = emailTemplates.generic({
-          title: 'New User Registered',
-          greeting: `Hello ${admin.first_name || 'Admin'},`,
-          message: `A new user has registered on the platform.`,
-          details: [
-            `<strong>Name:</strong> ${userName}`,
-            `<strong>Email:</strong> ${userEmail}`,
-            `<strong>Registration Date:</strong> ${new Date().toLocaleString()}`,
-          ],
-          actionUrl: detailsUrl,
-          actionText: 'View User Profile',
-        });
-
-        await this.sendEmail(
-          admin.email,
-          'New User Registration',
-          html
-        );
-
-        // Create in-app notification
-        await this.createNotification({
-          user_id: admin.directus_user_id,
-          title: 'New User Registered',
-          message: `${userName} (${userEmail}) has joined the platform.`,
-          type: 'system',
-          related_id: newUserId,
-          is_read: false,
-        });
-      }
-
-      return { success: true, message: `Notified ${admins.length} admin(s)` };
-    } catch (error) {
-      console.error('Error notifying admins about new user:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Notify all admins about new report posted
-   */
-  async notifyAdminsNewReportPosted(
-    reportId: string,
-    reportType: string,
-    urgencyLevel: string,
-    location: string,
-    reporterName: string
-  ) {
-    try {
-      const admins = await this.getAdminUsers();
-      
-      if (admins.length === 0) {
-        console.warn('No admin users found to notify');
-        return { success: false, message: 'No admin users found' };
-      }
-
-      const detailsUrl = `${config.frontend.url}/reports/show/${reportId}`;
-      const urgencyEmoji = urgencyLevel === 'critical' ? '🚨' : urgencyLevel === 'high' ? '⚠️' : 'ℹ️';
-
-      // Send notification to each admin
-      for (const admin of admins) {
-        if (!admin.directus_user_id) continue;
-
-        // Send email
-        const html = emailTemplates.generic({
-          title: 'New Report Posted',
-          greeting: `Hello ${admin.first_name || 'Admin'},`,
-          message: `A new ${reportType} report has been posted and requires attention.`,
-          details: [
-            `<strong>Type:</strong> ${reportType}`,
-            `<strong>Urgency Level:</strong> ${urgencyEmoji} ${urgencyLevel.toUpperCase()}`,
-            `<strong>Location:</strong> ${location}`,
-            `<strong>Reported By:</strong> ${reporterName}`,
-            `<strong>Report Date:</strong> ${new Date().toLocaleString()}`,
-          ],
-          actionUrl: detailsUrl,
-          actionText: 'View Report Details',
-        });
-
-        await this.sendEmail(
-          admin.email,
-          `New ${urgencyLevel.toUpperCase()} Report: ${reportType}`,
-          html
-        );
-
-        // Create in-app notification
-        await this.createNotification({
-          user_id: admin.directus_user_id,
-          title: `New ${urgencyLevel.toUpperCase()} Report`,
-          message: `${urgencyEmoji} ${reportType} report at ${location} by ${reporterName}`,
-          type: 'system',
-          related_id: reportId,
-          is_read: false,
-        });
-      }
-
-      return { success: true, message: `Notified ${admins.length} admin(s)` };
-    } catch (error) {
-      console.error('Error notifying admins about new report:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Notify all admins about new adoption request
-   */
-  async notifyAdminsNewAdoptionRequest(
-    adoptionId: string,
-    petName: string,
-    petSpecies: string,
-    adopterName: string,
-    adopterEmail: string
-  ) {
-    try {
-      const admins = await this.getAdminUsers();
-      
-      if (admins.length === 0) {
-        console.warn('No admin users found to notify');
-        return { success: false, message: 'No admin users found' };
-      }
-
-      const detailsUrl = `${config.frontend.url}/adoptions/show/${adoptionId}`;
-
-      // Send notification to each admin
-      for (const admin of admins) {
-        if (!admin.directus_user_id) continue;
-
-        // Send email
-        const html = emailTemplates.generic({
-          title: 'New Adoption Request',
-          greeting: `Hello ${admin.first_name || 'Admin'},`,
-          message: `A new adoption request has been submitted and is awaiting review.`,
-          details: [
-            `<strong>Pet:</strong> ${petName} (${petSpecies})`,
-            `<strong>Adopter Name:</strong> ${adopterName}`,
-            `<strong>Adopter Email:</strong> ${adopterEmail}`,
-            `<strong>Request Date:</strong> ${new Date().toLocaleString()}`,
-          ],
-          actionUrl: detailsUrl,
-          actionText: 'Review Adoption Request',
-        });
-
-        await this.sendEmail(
-          admin.email,
-          'New Adoption Request Pending',
-          html
-        );
-
-        // Create in-app notification
-        await this.createNotification({
-          user_id: admin.directus_user_id,
-          title: 'New Adoption Request',
-          message: `${adopterName} wants to adopt ${petName} (${petSpecies})`,
-          type: 'system',
-          related_id: adoptionId,
-          is_read: false,
-        });
-      }
-
-      return { success: true, message: `Notified ${admins.length} admin(s)` };
-    } catch (error) {
-      console.error('Error notifying admins about new adoption:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Notify all admins when a user claims a report (creates a rescue)
-   */
-  async notifyAdminsReportClaimed(
-    rescueId: string,
-    reportId: string,
-    claimerName: string,
-    location: string,
-    reportType: string
-  ) {
-    try {
-      const admins = await this.getAdminUsers();
-      
-      if (admins.length === 0) {
-        console.warn('No admin users found to notify');
-        return { success: false, message: 'No admin users found' };
-      }
-
-      const rescueUrl = `${config.frontend.url}/rescues/show/${rescueId}`;
-      const reportUrl = `${config.frontend.url}/reports/show/${reportId}`;
-
-      // Send notification to each admin
-      for (const admin of admins) {
-        if (!admin.directus_user_id) continue;
-
-        // Send email
-        const html = emailTemplates.generic({
-          title: 'Report Claimed for Rescue',
-          greeting: `Hello ${admin.first_name || 'Admin'},`,
-          message: `A user has claimed a report and initiated a rescue mission.`,
-          details: [
-            `<strong>Claimed By:</strong> ${claimerName}`,
-            `<strong>Report Type:</strong> ${reportType}`,
-            `<strong>Location:</strong> ${location}`,
-            `<strong>Rescue ID:</strong> #${rescueId}`,
-            `<strong>Original Report:</strong> <a href="${reportUrl}">#${reportId}</a>`,
-            `<strong>Claim Date:</strong> ${new Date().toLocaleString()}`,
-          ],
-          actionUrl: rescueUrl,
-          actionText: 'View Rescue Mission',
-        });
-
-        await this.sendEmail(
-          admin.email,
-          'Report Claimed - Rescue Mission Started',
-          html
-        );
-
-        // Create in-app notification
-        await this.createNotification({
-          user_id: admin.directus_user_id,
-          title: 'Report Claimed',
-          message: `${claimerName} claimed ${reportType} report at ${location}`,
-          type: 'system',
-          related_id: rescueId,
-          is_read: false,
-        });
-      }
-
-      return { success: true, message: `Notified ${admins.length} admin(s)` };
-    } catch (error) {
-      console.error('Error notifying admins about report claim:', error);
+      console.error('Error creating report notification:', error);
       throw error;
     }
   }

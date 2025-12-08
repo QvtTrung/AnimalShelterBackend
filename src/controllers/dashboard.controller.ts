@@ -37,7 +37,9 @@ export class DashboardController {
       const currentUser = await directus.request(readMe({ fields: ['id'] }));
       
       if (!currentUser || !currentUser.id) {
-        return sendError(res, { status: 401, statusCode: 'fail', message: 'Authentication required' });
+        const error = new Error('Authentication required');
+        (error as any).statusCode = 401;
+        return sendError(res, error, 401);
       }
       
       const appUsers = await directus.request(readItems('users', {
@@ -47,7 +49,9 @@ export class DashboardController {
       }));
       
       if (!appUsers || appUsers.length === 0) {
-        return sendError(res, { status: 404, statusCode: 'fail', message: 'User profile not found' });
+        const error = new Error('User profile not found');
+        (error as any).statusCode = 404;
+        return sendError(res, error, 404);
       }
       
       const userId = appUsers[0].id;
@@ -71,7 +75,9 @@ export class DashboardController {
       const currentUser = await directus.request(readMe({ fields: ['id'] }));
       
       if (!currentUser || !currentUser.id) {
-        return sendError(res, { status: 401, statusCode: 'fail', message: 'Authentication required' });
+        const error = new Error('Authentication required');
+        (error as any).statusCode = 401;
+        return sendError(res, error, 401);
       }
       
       const appUsers = await directus.request(readItems('users', {
@@ -81,7 +87,9 @@ export class DashboardController {
       }));
       
       if (!appUsers || appUsers.length === 0) {
-        return sendError(res, { status: 404, statusCode: 'fail', message: 'User profile not found' });
+        const error = new Error('User profile not found');
+        (error as any).statusCode = 404;
+        return sendError(res, error, 404);
       }
       
       const userId = appUsers[0].id;
@@ -116,7 +124,9 @@ export class DashboardController {
         const currentUser = await directus.request(readMe({ fields: ['id'] }));
         
         if (!currentUser || !currentUser.id) {
-          return sendError(res, { status: 401, statusCode: 'fail', message: 'Authentication required' });
+          const error = new Error('Authentication required');
+          (error as any).statusCode = 401;
+          return sendError(res, error, 401);
         }
         
         const appUsers = await directus.request(readItems('users', {
@@ -126,7 +136,9 @@ export class DashboardController {
         }));
         
         if (!appUsers || appUsers.length === 0) {
-          return sendError(res, { status: 404, statusCode: 'fail', message: 'User profile not found' });
+          const error = new Error('User profile not found');
+          (error as any).statusCode = 404;
+          return sendError(res, error, 404);
         }
 
         const userCoordinates = (appUsers[0] as any).coordinates;
@@ -150,11 +162,9 @@ export class DashboardController {
       }
 
       if (!userLat || !userLng) {
-        return sendError(res, { 
-          status: 400, 
-          statusCode: 'fail', 
-          message: 'Không có tọa độ người dùng. Vui lòng cung cấp vị trí hoặc cập nhật hồ sơ của bạn.' 
-        });
+        const error = new Error('Không có tọa độ người dùng. Vui lòng cung cấp vị trí hoặc cập nhật hồ sơ của bạn.');
+        (error as any).statusCode = 400;
+        return sendError(res, error, 400);
       }
 
       const radiusMeters = parseInt(radius as string);

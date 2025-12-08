@@ -42,7 +42,7 @@ export class NotificationController {
   getUserNotifications = asyncHandler(async (req: Request, res: Response) => {
     const userId = await this.getCurrentUserId();
     const unreadOnly = req.query.unreadOnly === 'true';
-    const result = await this.notificationService.getUserNotifications(userId, unreadOnly);
+    const result = await this.notificationService.getUserNotifications(userId, unreadOnly, req.query);
 
     res.status(200).json({
       status: 'success',

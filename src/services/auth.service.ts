@@ -189,13 +189,15 @@ export class AuthService {
     const loginResult = await directus.login({ email, password });
     directus.setToken('');
     
-    // Notify admins about new user registration (non-blocking)
-    this.notificationService.notifyAdminsNewUserRegistered(
-      createdAppUser.id,
-      `${first_name} ${last_name}`,
-      email
-    ).catch(error => {
-      console.error('Failed to send new user notification to admins:', error);
+    // Log user registration activity (non-blocking)
+    import('../services/activity-log.service').then(({ activityLogService }) => {
+      activityLogService.logUserRegistration(
+        createdAppUser.id,
+        `${first_name} ${last_name}`,
+        email
+      ).catch(error => {
+        console.error('Failed to log user registration activity:', error);
+      });
     });
     
     return { 

@@ -39,13 +39,21 @@ export class ReportService extends BaseService<Report> {
       const limit = Number(query?.limit) || Number(query?.pageSize) || 10;
       const offset = (page - 1) * limit;
 
-      const { page: _, limit: __, pageSize: ___, search, urgency_level, status, sort, ...restQuery } = query || {};
+      const { page: _, limit: __, pageSize: ___, search, urgency_level, status, sort, ids, ...restQuery } = query || {};
 
       // Determine sort order (default: newest first)
       const sortOrder = sort === 'oldest' ? ['date_created'] : ['-date_created'];
 
       // Build filter object for search and other filters
       let filter: any = {};
+      
+      // Add IDs filter (for fetching specific reports by IDs)
+      let fetchingByIds = false;
+      if (ids) {
+        const idArray = typeof ids === 'string' ? ids.split(',') : Array.isArray(ids) ? ids : [ids];
+        filter.id = { _in: idArray };
+        fetchingByIds = true;
+      }
       
       // Add urgency level filter
       if (urgency_level) {
@@ -80,14 +88,24 @@ export class ReportService extends BaseService<Report> {
       
       const total = countResponse?.[0]?.count ?? 0;
 
-      // Get reports with filter, pagination, and dynamic sort
-      const items = await this.sdk.request(readItems(this.collection, {
+      // When fetching by IDs, don't apply pagination - fetch all requested items
+      // Otherwise, use normal pagination
+      const queryOptions: any = {
         ...restQuery,
-        limit,
-        offset,
         sort: sortOrder,
         ...(Object.keys(filter).length > 0 ? { filter } : {}),
-      }));
+      };
+
+      if (!fetchingByIds) {
+        queryOptions.limit = limit;
+        queryOptions.offset = offset;
+      } else {
+        // When fetching by IDs, set limit to -1 to fetch all matching items
+        queryOptions.limit = -1;
+      }
+
+      // Get reports with filter, pagination, and dynamic sort
+      const items = await this.sdk.request(readItems(this.collection, queryOptions));
       
       // console.log('[ReportService] Sample report from findAll:', items?.[0]?.user_created);
 
@@ -328,8 +346,8 @@ export class ReportService extends BaseService<Report> {
         'Good news! Your report has been claimed and a rescue team is being dispatched.'
       );
 
-      // Notify admins about report claim (non-blocking)
-      // Get user details for notification
+      // Log report claim activity (non-blocking)
+      // Get user details for activity log
       const user = await this.sdk.request(readItems('users', {
         filter: { id: { _eq: userId } },
         fields: ['first_name', 'last_name'],
@@ -338,14 +356,17 @@ export class ReportService extends BaseService<Report> {
       
       if (user && user.length > 0) {
         const userName = `${user[0].first_name} ${user[0].last_name}`;
-        this.notificationService.notifyAdminsReportClaimed(
-          rescue.id,
-          reportId,
-          userName,
-          report.location || 'Unknown location',
-          report.type || 'General'
-        ).catch(error => {
-          console.error('Failed to send report claim notification to admins:', error);
+        import('../services/activity-log.service').then(({ activityLogService }) => {
+          activityLogService.logReportClaimed(
+            rescue.id,
+            reportId,
+            userName,
+            userId,
+            report.location || 'Unknown location',
+            report.type || 'General'
+          ).catch(error => {
+            console.error('Failed to log report claim activity:', error);
+          });
         });
       }
 

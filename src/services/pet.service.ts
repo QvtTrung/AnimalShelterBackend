@@ -27,14 +27,22 @@ export class PetService extends BaseService<Pet> {
       const offset = (page - 1) * limit;
 
       // Remove refine-specific pagination params
-      const { page: _, limit: __, pageSize: ___, sort, ...restQuery } = query || {};
+      const { page: _, limit: __, pageSize: ___, sort, ids, ...restQuery } = query || {};
 
       // Handle filters - support both Refine format (filter object) and direct query params
       let filter: any = {};
+      let fetchingByIds = false;
+      
+      // Add IDs filter (for fetching specific pets by IDs)
+      if (ids) {
+        const idArray = typeof ids === 'string' ? ids.split(',') : Array.isArray(ids) ? ids : [ids];
+        filter.id = { _in: idArray };
+        fetchingByIds = true;
+      }
       
       // If Refine passes a filter object (from admin frontend), use it
       if (restQuery.filter) {
-        filter = restQuery.filter;
+        filter = { ...filter, ...restQuery.filter };
       } else {
         // Otherwise build filter from direct query params (from public frontend)
         if (restQuery.status) {
@@ -54,8 +62,8 @@ export class PetService extends BaseService<Pet> {
       // Build query for items WITHOUT images first
       const itemsQuery: any = {
         fields: ['*'],
-        limit,
-        offset,
+        limit: fetchingByIds ? -1 : limit,
+        offset: fetchingByIds ? 0 : offset,
       };
 
       // Add filter if exists

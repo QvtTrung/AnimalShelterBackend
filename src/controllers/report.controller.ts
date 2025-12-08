@@ -4,17 +4,14 @@ import { ReportImageService } from '../services/report-image.service';
 import { asyncHandler } from '../middleware/error.middleware';
 import { sendSuccess, sendError } from '../utils/response';
 import { AppError } from '../utils/errors';
-import { NotificationService } from '../services/notification.service';
 
 export class ReportController {
   private reportService: ReportService;
   private reportImageService: ReportImageService;
-  private notificationService: NotificationService;
 
   constructor() {
     this.reportService = new ReportService();
     this.reportImageService = new ReportImageService();
-    this.notificationService = new NotificationService();
   }
 
   getAllReports = asyncHandler(async (req: Request, res: Response) => {
@@ -133,21 +130,28 @@ export class ReportController {
     // Fetch the report with its images
     const reportWithImages = await this.reportService.findOne(report.id);
     
-    // Notify admins about new report (non-blocking)
+    // Log report creation activity (non-blocking)
     const reporterName = reportWithImages.user_created 
       ? (typeof reportWithImages.user_created === 'object' 
           ? `${reportWithImages.user_created.first_name} ${reportWithImages.user_created.last_name}` 
           : reportWithImages.contact_name || 'Anonymous')
       : reportWithImages.contact_name || 'Anonymous';
     
-    this.notificationService.notifyAdminsNewReportPosted(
-      report.id,
-      reportWithImages.type || 'General',
-      reportWithImages.urgency_level || 'medium',
-      reportWithImages.location || 'Unknown location',
-      reporterName
-    ).catch(error => {
-      console.error('Failed to send new report notification to admins:', error);
+    const reporterId = reportWithImages.user_created && typeof reportWithImages.user_created === 'object'
+      ? reportWithImages.user_created.id
+      : undefined;
+    
+    import('../services/activity-log.service').then(({ activityLogService }) => {
+      activityLogService.logReportCreated(
+        report.id,
+        reportWithImages.type || 'General',
+        reportWithImages.urgency_level || 'medium',
+        reportWithImages.location || 'Unknown location',
+        reporterName,
+        reporterId
+      ).catch(error => {
+        console.error('Failed to log report creation activity:', error);
+      });
     });
     
     sendSuccess(res, reportWithImages, 201);

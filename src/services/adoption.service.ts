@@ -188,7 +188,7 @@ export class AdoptionService extends BaseService<DirectusAdoption> {
         status: 'pending'
       });
 
-      // Notify admins about new adoption request (non-blocking)
+      // Log adoption request activity (non-blocking)
       // Get the full adoption details with pet and user info
       const adoptionDetails = await this.findOne(adoption.id);
       if (adoptionDetails) {
@@ -204,15 +204,21 @@ export class AdoptionService extends BaseService<DirectusAdoption> {
         const adopterEmail = typeof adoptionDetails.user_id === 'object'
           ? adoptionDetails.user_id.email
           : 'Unknown';
+        const adopterId = typeof adoptionDetails.user_id === 'object'
+          ? adoptionDetails.user_id.id
+          : undefined;
         
-        this.notificationService.notifyAdminsNewAdoptionRequest(
-          adoption.id,
-          petName,
-          petSpecies,
-          adopterName,
-          adopterEmail
-        ).catch(error => {
-          console.error('Failed to send new adoption notification to admins:', error);
+        import('../services/activity-log.service').then(({ activityLogService }) => {
+          activityLogService.logAdoptionRequested(
+            adoption.id,
+            petName,
+            petSpecies,
+            adopterName,
+            adopterEmail,
+            adopterId
+          ).catch(error => {
+            console.error('Failed to log adoption request activity:', error);
+          });
         });
       }
 

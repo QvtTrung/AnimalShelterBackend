@@ -31,7 +31,16 @@ export class BaseService<T> {
       const offset = (page - 1) * limit;
 
       // Remove refine-specific pagination params to avoid conflicts
-      const { page: _, limit: __, pageSize: ___, ...restQuery } = query || {};
+      const { page: _, limit: __, pageSize: ___, ids, ...restQuery } = query || {};
+      
+      // Check if fetching by IDs
+      let fetchingByIds = false;
+      if (ids) {
+        const idArray = typeof ids === 'string' ? ids.split(',') : Array.isArray(ids) ? ids : [ids];
+        if (!restQuery.filter) restQuery.filter = {};
+        restQuery.filter.id = { _in: idArray };
+        fetchingByIds = true;
+      }
 
       // First get total count
       const countResponse = await this.sdk.request(readItems(this.collection, {
@@ -41,18 +50,20 @@ export class BaseService<T> {
       
       const total = countResponse?.[0]?.count ?? 0;
 
-      // Then get paginated data
-      const items = await this.sdk.request(readItems(this.collection, {
+      // Then get paginated data (skip pagination if fetching by IDs)
+      const queryOptions: any = {
         ...restQuery,
-        limit,
-        offset,
-      }));
+        limit: fetchingByIds ? -1 : limit,
+        offset: fetchingByIds ? 0 : offset,
+      };
+
+      const items = await this.sdk.request(readItems(this.collection, queryOptions));
 
       return {
         data: Array.isArray(items) ? items : [],
         total,
       };
-    } catch (error) {
+    } catch (error: any) {
       throw error;
     }
   }
