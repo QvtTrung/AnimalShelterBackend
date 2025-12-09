@@ -309,8 +309,8 @@ export class ReportService extends BaseService<Report> {
 
       // Create a rescue campaign with in_progress status
       const rescueData = {
-        title: `Rescue for: ${report.title}`,
-        description: `Emergency rescue for ${report.species} at ${report.location}`,
+        title: `Cứu hộ cho: ${report.title}`,
+        description: `Cứu hộ khẩn cấp cho ${report.species} tại ${report.location}`,
         status: 'in_progress',
         required_participants: 1,
         start_date: new Date(),
@@ -323,7 +323,7 @@ export class ReportService extends BaseService<Report> {
         rescues_id: rescue.id,
         reports_id: reportId,
         status: 'in_progress',
-        note: 'Report claimed and rescue initiated',
+        note: 'Báo cáo đã được nhận và cứu hộ đã được khởi tạo',
       };
 
       await this.sdk.request(createItem('rescues_reports', rescueReportData));
@@ -343,7 +343,7 @@ export class ReportService extends BaseService<Report> {
       await this.updateReportStatus(
         reportId, 
         'assigned',
-        'Good news! Your report has been claimed and a rescue team is being dispatched.'
+        'Tin tốt! Báo cáo của bạn đã được nhận và một đội cứu hộ đang được điều động.'
       );
 
       // Log report claim activity (non-blocking)
@@ -374,7 +374,7 @@ export class ReportService extends BaseService<Report> {
       return {
         rescue,
         report_id: reportId,
-        message: 'Report claimed successfully and rescue campaign created',
+        message: 'Nhận giải cứu thành công',
       };
     } catch (error) {
       console.error('Error claiming report:', error);

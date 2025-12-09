@@ -15,7 +15,7 @@ export const createPetSchema = z.object({
     health_status: z.enum(['healthy', 'needs_attention', 'critical', 'deceased'], {
       required_error: 'Health status is required'
     }),
-    description: z.string().max(1000, 'Description is too long').optional(),
+    description: z.string().max(5000, 'Description is too long').optional(),
     status: z.enum(['available', 'pending', 'adopted', 'archived'])
       .default('available'),
     linked_report: z.string().uuid('Invalid report ID').optional()
