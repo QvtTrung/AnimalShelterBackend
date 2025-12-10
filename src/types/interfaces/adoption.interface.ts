@@ -13,4 +13,16 @@ export interface DirectusAdoption {
   notes?: string;
   confirmation_sent_at?: string;
   confirmation_expires_at?: string;
+  
+  // Application form fields
+  full_name?: string;
+  phone_number?: string;
+  email?: string;
+  address?: string;
+  housing_type?: 'apartment' | 'house' | 'villa';
+  housing_area?: number;
+  has_yard?: boolean;
+  pet_experience?: string;
+  adoption_reason?: string;
+  care_commitment?: string;
 }

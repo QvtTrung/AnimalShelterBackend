@@ -61,4 +61,14 @@ export class AuthController {
       return sendError(res, error);
     }
   });
+
+  changePassword = asyncHandler(async (req: Request, res: Response) => {
+    try {
+      const { current_password, new_password } = req.body;
+      await this.authService.changePassword(current_password, new_password);
+      sendSuccess(res, { message: 'Password changed successfully' }, 200);
+    } catch (error) {
+      return sendError(res, error);
+    }
+  });
 }

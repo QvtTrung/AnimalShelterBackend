@@ -206,7 +206,27 @@ export class RescueService extends BaseService<DirectusRescue> {
   // Remove report from rescue
   async removeReport(rescueReportId: string) {
     try {
+      // Get the rescue-report relationship to find the actual report ID
+      const rescueReport = await this.sdk.request(readItem('rescues_reports', rescueReportId, {
+        fields: ['*', 'reports_id', 'rescues_id.*']
+      }));
+
+      if (!rescueReport) {
+        throw new AppError(404, 'fail', 'Không tìm thấy báo cáo cứu hộ');
+      }
+
+      const reportId = typeof rescueReport.reports_id === 'object' 
+        ? rescueReport.reports_id.id 
+        : rescueReport.reports_id;
+
+      // Delete the rescue-report relationship
       await this.sdk.request(deleteItem('rescues_reports', rescueReportId));
+
+      // Update the report status back to 'pending' when removed from rescue
+      await this.sdk.request(updateItem('reports', reportId, {
+        status: 'pending'
+      }));
+
       return true;
     } catch (error) {
       throw error;
@@ -416,6 +436,7 @@ export class RescueService extends BaseService<DirectusRescue> {
    * Complete a rescue campaign
    * Updates rescue status to 'completed'
    * For each report: if 'success' -> set to 'resolved', otherwise -> set back to 'pending'
+   * Validates that all reports are either 'success' or 'cancelled' (not 'in_progress')
    */
   async completeRescue(rescueId: string) {
     try {
@@ -426,6 +447,21 @@ export class RescueService extends BaseService<DirectusRescue> {
 
       if (rescue.status !== 'in_progress') {
         throw new AppError(400, 'fail', 'Chỉ có thể hoàn tất chiến dịch đang tiến hành');
+      }
+
+      // Validate that all reports are either 'success' or 'cancelled'
+      if (rescue.reports && rescue.reports.length > 0) {
+        const inProgressReports = rescue.reports.filter(
+          (rescueReport: any) => rescueReport.status === 'in_progress'
+        );
+
+        if (inProgressReports.length > 0) {
+          throw new AppError(
+            400, 
+            'fail', 
+            `Không thể hoàn tất chiến dịch. Còn ${inProgressReports.length} báo cáo đang xử lý. Vui lòng cập nhật tất cả báo cáo thành 'Hoàn thành' hoặc 'Hủy' trước khi hoàn tất chiến dịch.`
+          );
+        }
       }
 
       // Process all related reports and notify reporters
@@ -460,8 +496,8 @@ export class RescueService extends BaseService<DirectusRescue> {
                 console.error('Failed to notify reporter:', notifError);
               }
             }
-          } else {
-            // Mark report back to pending (including cancelled or still in_progress)
+          } else if (rescueReport.status === 'cancelled') {
+            // Mark report back to pending for cancelled reports
             await this.sdk.request(updateItem('reports', reportId, {
               status: 'pending'
             }));
@@ -473,7 +509,7 @@ export class RescueService extends BaseService<DirectusRescue> {
                   reportId,
                   reportCreatorId,
                   'pending',
-                  'The rescue mission has been completed, but your report needs further attention. It has been marked as pending again.'
+                  'The rescue mission has been completed, but your report was marked as cancelled. It has been returned to pending status for further attention.'
                 );
               } catch (notifError) {
                 console.error('Failed to notify reporter:', notifError);

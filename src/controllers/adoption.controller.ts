@@ -48,8 +48,24 @@ export class AdoptionController {
 
   createAdoption = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      // console.log('Creating adoption with data:', req.body);
-      const adoption = await this.adoptionService.create(req.body);
+      // Get authenticated user from Directus
+      const { readMe } = await import('@directus/sdk');
+      const { directus } = await import('../config/directus');
+      
+      const currentUser = await directus.request(readMe({ fields: ['id'] }));
+      
+      if (!currentUser || !currentUser.id) {
+        throw new AppError(401, 'fail', 'Yêu cầu đăng nhập');
+      }
+
+      // Attach user_id from authenticated user if not provided
+      const adoptionData = {
+        ...req.body,
+        user_id: req.body.user_id || currentUser.id
+      };
+
+      // console.log('Creating adoption with data:', adoptionData);
+      const adoption = await this.adoptionService.create(adoptionData);
       sendSuccess(res, adoption, 201);
     } catch (error) {
       next(error);

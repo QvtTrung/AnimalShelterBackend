@@ -2,7 +2,7 @@ import { directus } from '../config/directus';
 // import  config  from '../config/index';
 import { UnauthorizedError, DuplicateEmailError } from '../utils/errors';
 // import { logger } from '../utils/logger';
-import { readMe, registerUser, readUsers, readItems, createItem, deleteItem, refresh } from '@directus/sdk';
+import { readMe, registerUser, readUsers, readItems, createItem, deleteItem, refresh, updateUser } from '@directus/sdk';
 import { DirectusUser, AppUser, AppUserOrNull, RegisterPayload, UsersQuery } from '../types/directus';
 import { extractDirectusData } from '../utils/validation';
 import config from '../config/index';
@@ -283,6 +283,48 @@ export class AuthService {
       }
       
       throw new UnauthorizedError('Không thể làm mới token. Vui lòng đăng nhập lại.');
+    }
+  }
+
+  async changePassword(currentPassword: string, newPassword: string) {
+    try {
+      // Get the current authenticated user
+      const directusUser = await directus.request(readMe({
+        fields: ['id', 'email']
+      }));
+
+      if (!directusUser || !directusUser.id) {
+        throw new UnauthorizedError('No authenticated user found');
+      }
+
+      // Verify current password by attempting to login
+      try {
+        await directus.login({ email: directusUser.email, password: currentPassword });
+      } catch (error) {
+        throw new UnauthorizedError('Current password is incorrect');
+      }
+
+      // Update the password in Directus
+      try {
+        await directus.request(updateUser(directusUser.id, { password: newPassword }));
+      } catch (error: any) {
+        throw new UnauthorizedError(error?.message || 'Failed to update password');
+      }
+
+      // Log password change activity (non-blocking)
+      import('../services/activity-log.service').then(({ activityLogService }) => {
+        activityLogService.logActivity({
+          user_id: directusUser.id,
+          action: 'PASSWORD_CHANGED',
+          entity_type: 'user',
+          entity_id: directusUser.id,
+          description: 'User changed their password',
+        }).catch(err => console.error('Failed to log password change activity:', err));
+      });
+
+      return true;
+    } catch (error) {
+      throw error;
     }
   }
 }
