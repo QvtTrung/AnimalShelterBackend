@@ -49,19 +49,33 @@ export class AdoptionController {
   createAdoption = async (req: Request, res: Response, next: NextFunction) => {
     try {
       // Get authenticated user from Directus
-      const { readMe } = await import('@directus/sdk');
+      const { readMe, readItems } = await import('@directus/sdk');
       const { directus } = await import('../config/directus');
+      const { extractDirectusData } = await import('../utils/validation');
       
-      const currentUser = await directus.request(readMe({ fields: ['id'] }));
+      const directusUser = await directus.request(readMe({ fields: ['id'] }));
       
-      if (!currentUser || !currentUser.id) {
+      if (!directusUser || !directusUser.id) {
         throw new AppError(401, 'fail', 'Yêu cầu đăng nhập');
+      }
+
+      // Get the application user ID from the users collection
+      const query = {
+        filter: { directus_user_id: { _eq: directusUser.id } },
+        limit: 1,
+        fields: ['id'],
+      };
+      const appUserRes = await directus.request(readItems('users', query));
+      const appUser = extractDirectusData<{ id: string }>(appUserRes);
+      
+      if (!appUser || !appUser.id) {
+        throw new AppError(404, 'fail', 'Không tìm thấy thông tin người dùng');
       }
 
       // Attach user_id from authenticated user if not provided
       const adoptionData = {
         ...req.body,
-        user_id: req.body.user_id || currentUser.id
+        user_id: req.body.user_id || appUser.id
       };
 
       // console.log('Creating adoption with data:', adoptionData);
